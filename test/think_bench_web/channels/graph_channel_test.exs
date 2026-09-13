@@ -120,6 +120,32 @@ defmodule ThinkBenchWeb.GraphChannelTest do
       assert_push "event", %{event: %{seq: ^seq, action: :update}, card: %{status: :resolved}}
     end
 
+    test "update_card pins and unpins", %{socket: socket, robert: robert, idea: idea} do
+      id = idea.id
+      ref = push(socket, "update_card", %{"id" => id, "pinned" => true})
+
+      assert_reply ref, :ok, %{seq: seq, card: %{id: ^id, pinned: true}}
+      event = last_event_by(robert)
+      assert {event.seq, event.action} == {seq, :update}
+      assert Graph.get_card!(id).pinned
+
+      assert_push "event", %{
+        event: %{seq: ^seq, action: :update, changes: changes},
+        card: %{id: ^id, pinned: true}
+      }
+
+      assert changes[:pinned] == true or changes["pinned"] == true
+
+      ref = push(socket, "update_card", %{"id" => id, "pinned" => false})
+      assert_reply ref, :ok, %{card: %{pinned: false}}
+      assert_push "event", %{card: %{id: ^id, pinned: false}}
+      refute Graph.get_card!(id).pinned
+    end
+
+    test "join sends pinned on every card", %{reply: reply} do
+      assert Enum.all?(reply.cards, &(&1.pinned == false))
+    end
+
     test "link", %{socket: socket, robert: robert, idea: idea, question: question} do
       ref =
         push(socket, "link", %{"from" => question.id, "to" => idea.id, "type" => "challenges"})

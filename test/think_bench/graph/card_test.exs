@@ -58,6 +58,21 @@ defmodule ThinkBench.Graph.CardTest do
     assert updated.created_by_id == robert.id
   end
 
+  test "cards start unpinned; update_card pins and unpins with one event each",
+       %{robert: robert} do
+    card = card(robert)
+    refute card.pinned
+
+    pinned = Graph.update_card!(card, %{pinned: true}, actor: robert)
+    assert pinned.pinned
+    assert Graph.get_card!(card.id).pinned
+    assert pinned.__metadata__.event.action == :update
+
+    unpinned = Graph.update_card!(pinned, %{pinned: false}, actor: robert)
+    refute Graph.get_card!(card.id).pinned
+    assert unpinned.__metadata__.seq == pinned.__metadata__.seq + 1
+  end
+
   test "move_card sets the position and needs both coordinates", %{robert: robert} do
     card = card(robert, x: 0, y: 0)
 

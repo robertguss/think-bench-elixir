@@ -16,6 +16,7 @@ defmodule ThinkBench.Mcp.Json do
       title: card.title,
       tags: card.tags,
       status: card.status,
+      pinned: card.pinned,
       x: card.x,
       y: card.y,
       created_by: Map.get(names, card.created_by_id)

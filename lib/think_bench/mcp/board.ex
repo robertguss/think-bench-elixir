@@ -95,8 +95,9 @@ defmodule ThinkBench.Mcp.Board do
 
     action :update_card, :map do
       description """
-      Change a card's title, body, tags or status. Pass id and only the fields to change; \
+      Change a card's title, body, tags, status or pinned. Pass id and only the fields to change; \
       tags replaces the whole list. Set status to resolved when a question is answered. \
+      Set pinned to true to keep a card in the human's pins (false unpins). \
       Returns {seq, card}.
       """
 
@@ -109,6 +110,8 @@ defmodule ThinkBench.Mcp.Board do
         constraints one_of: [:open, :resolved]
         description "open or resolved."
       end
+
+      argument :pinned, :boolean, description: "true pins the card, false unpins it."
 
       argument :actor, :string, description: @actor_doc
       run &Tools.update_card/2

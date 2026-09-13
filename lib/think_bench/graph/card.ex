@@ -47,7 +47,7 @@ defmodule ThinkBench.Graph.Card do
     end
 
     update :update do
-      accept [:title, :body, :tags, :status]
+      accept [:title, :body, :tags, :status, :pinned]
     end
 
     update :move do
@@ -104,6 +104,13 @@ defmodule ThinkBench.Graph.Card do
       public? true
       default :open
       constraints one_of: [:open, :resolved]
+    end
+
+    attribute :pinned, :boolean do
+      allow_nil? false
+      public? true
+      default false
+      description "Pinned cards are kept to hand in the Focus view's pins strip."
     end
 
     attribute :x, :integer do

@@ -260,6 +260,30 @@ defmodule ThinkBenchWeb.McpTest do
       assert message =~ "at least one"
     end
 
+    test "update_card pins and unpins a card, evented as claude-code", %{session: session} do
+      card = card_by_title("Voice capture from my phone?")
+
+      assert {:ok, %{"seq" => s1, "card" => %{"pinned" => true, "title" => title}}} =
+               call(session, "update_card", %{id: card.id, pinned: true})
+
+      assert title == card.title
+      assert Graph.get_card!(card.id).pinned
+
+      assert {:ok, board} = call(session, "read_board")
+      assert %{"pinned" => true} = Enum.find(board["cards"], &(&1["id"] == card.id))
+
+      assert {:ok, %{"seq" => s2, "card" => %{"pinned" => false}}} =
+               call(session, "update_card", %{id: card.id, pinned: false})
+
+      refute Graph.get_card!(card.id).pinned
+      {:ok, claude} = Graph.get_actor("claude-code")
+
+      assert [%{seq: ^s1, action: :update, actor_id: a1}, %{seq: ^s2, actor_id: a2}] =
+               Graph.changes_since!(s1 - 1)
+
+      assert {a1, a2} == {claude.id, claude.id}
+    end
+
     test "link and unlink by id or by endpoints", %{session: session} do
       a = card_by_title("Voice capture from my phone?")
       b = hd(Graph.list_cards!())

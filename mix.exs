@@ -103,6 +103,7 @@ defmodule ThinkBench.MixProject do
         "cmd --cd assets npm install"
       ],
       "assets.typecheck": ["cmd --cd assets npx tsc --noEmit"],
+      "assets.test": ["cmd --cd assets npx vitest run"],
       "assets.build": ["compile", "tailwind think_bench", "esbuild think_bench"],
       "assets.deploy": [
         "tailwind think_bench --minify",
@@ -114,7 +115,8 @@ defmodule ThinkBench.MixProject do
         "deps.unlock --check-unused",
         "format --check-formatted",
         "test",
-        "assets.typecheck"
+        "assets.typecheck",
+        "assets.test"
       ]
     ]
   end

@@ -1,7 +1,7 @@
 import { useReactFlow } from "@xyflow/react"
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { describeEvent, describeTool, timeAgo, titleIndex } from "./describe"
-import { CARD_WIDTH } from "./MapView"
+import { CARD_WIDTH } from "./CardFace"
 import { parseTags } from "./NewCardForm"
 import { LINK_TYPES, type Card, type GraphEvent } from "./types"
 import type { BoardActions, BoardState } from "./useBoard"
@@ -161,8 +161,8 @@ function SelectedCard(props: {
   const created = history.find((e) => e.action === "create")
   const last = history.at(-1)
 
-  const setStatus = (status: Card["status"]) =>
-    actions.call("update_card", { id: card.id, status }).catch((e: Error) => onError(`Update failed: ${e.message}`))
+  const update = (changes: Partial<Pick<Card, "status" | "pinned">>) =>
+    actions.call("update_card", { id: card.id, ...changes }).catch((e: Error) => onError(`Update failed: ${e.message}`))
 
   if (editing) return <EditCard card={card} actions={actions} onDone={() => setEditing(false)} onError={onError} />
 
@@ -170,6 +170,7 @@ function SelectedCard(props: {
     <div className="tb-sel">
       <div className="kindline" style={{ color: `var(--${card.kind})` }}>
         {card.kind.toUpperCase()} · {card.status}
+        {card.pinned && " · pinned"}
       </div>
       <h3>{card.title}</h3>
       {card.body && <p>{card.body}</p>}
@@ -236,14 +237,22 @@ function SelectedCard(props: {
           Edit
         </button>
         {card.status === "open" ? (
-          <button className="tb-btn" onClick={() => setStatus("resolved")}>
+          <button className="tb-btn" onClick={() => update({ status: "resolved" })}>
             Resolve
           </button>
         ) : (
-          <button className="tb-btn" onClick={() => setStatus("open")}>
+          <button className="tb-btn" onClick={() => update({ status: "open" })}>
             Reopen
           </button>
         )}
+        <button
+          className="tb-btn"
+          aria-pressed={card.pinned}
+          onClick={() => update({ pinned: !card.pinned })}
+          title={card.pinned ? "Remove from the Focus pins" : "Keep in the Focus pins"}
+        >
+          {card.pinned ? "Unpin" : "Pin"}
+        </button>
       </div>
     </div>
   )

@@ -32,8 +32,9 @@ export function describeEvent(e: GraphEvent, titles: Record<string, string>) {
       case "archive":
         return `archived ${card}`
       case "update": {
-        const fields = Object.keys(c).filter((k) => ["title", "body", "tags", "status"].includes(k))
+        const fields = Object.keys(c).filter((k) => ["title", "body", "tags", "status", "pinned"].includes(k))
         if (fields.length === 1 && fields[0] === "status") return `marked ${card} ${str(c.status)}`
+        if (fields.length === 1 && fields[0] === "pinned") return `${c.pinned ? "pinned" : "unpinned"} ${card}`
         return `edited ${card}${fields.length ? ` (${fields.join(", ")})` : ""}`
       }
     }
@@ -66,8 +67,8 @@ export function describeTool(e: GraphEvent, titles: Record<string, string>): [st
         return ["archive_card", t(e.record_id)]
       case "update": {
         const fields = Object.keys(c)
-          .filter((k) => ["title", "body", "tags", "status"].includes(k))
-          .map((k) => (k === "status" ? `status=${str(c.status)}` : k))
+          .filter((k) => ["title", "body", "tags", "status", "pinned"].includes(k))
+          .map((k) => (k === "status" ? `status=${str(c.status)}` : k === "pinned" ? `pinned=${c.pinned}` : k))
         return ["update_card", `${t(e.record_id)}: ${fields.join(", ")}`]
       }
     }

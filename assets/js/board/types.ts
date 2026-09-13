@@ -20,6 +20,7 @@ export type Card = {
   body?: string
   tags: string[]
   status: "open" | "resolved"
+  pinned: boolean
   x: number
   y: number
   created_by: string

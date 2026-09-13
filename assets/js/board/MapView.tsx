@@ -17,15 +17,16 @@ import {
   type Node,
   type NodeChange,
   type NodeProps,
+  type NodeSelectionChange,
   type OnNodeDrag,
-  type OnSelectionChangeParams,
+  type Viewport,
 } from "@xyflow/react"
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react"
+import { BoardHead } from "./BoardHead"
+import { CARD_WIDTH, CardFace } from "./CardFace"
 import { NewCardForm } from "./NewCardForm"
 import type { Card, Move, Region } from "./types"
 import type { BoardActions, BoardState } from "./useBoard"
-
-export const CARD_WIDTH = 220
 
 type CardNode = Node<{ card: Card; entering: boolean }, "card">
 type RegionNode = Node<{ region: Region }, "region">
@@ -35,34 +36,12 @@ type TypedEdge = Edge<{ label: string; hl: boolean }, "typed">
 // ---- nodes ---------------------------------------------------------------
 
 const CardNodeView = memo(function CardNodeView({ data, selected }: NodeProps<CardNode>) {
-  const { card, entering } = data
-  const resolved = card.status === "resolved"
-  const classes = ["tb-card", `k-${card.kind}`, resolved && "resolved", selected && "selected", entering && "enter"]
-
   return (
-    <div className={classes.filter(Boolean).join(" ")} style={{ width: CARD_WIDTH }}>
+    <>
       <Handle type="target" position={Position.Top} className="tb-handle" isConnectable={false} />
-      <div className="stripe" />
-      <div className="kind">
-        <span>
-          {card.kind}
-          {resolved && " · resolved"}
-        </span>
-        <span className="by">{card.created_by}</span>
-      </div>
-      <h3>{card.title}</h3>
-      {card.body && <p>{card.body}</p>}
-      {card.tags.length > 0 && (
-        <div className="meta">
-          {card.tags.map((tag) => (
-            <span key={tag} className="tag">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+      <CardFace card={data.card} selected={selected} entering={data.entering} />
       <Handle type="source" position={Position.Bottom} className="tb-handle" isConnectable={false} />
-    </div>
+    </>
   )
 })
 
@@ -127,6 +106,40 @@ function TypedEdgeView({ id, source, target, data }: EdgeProps<TypedEdge>) {
 
 const edgeTypes = { typed: TypedEdgeView }
 
+function buildNodes(prev: MapNode[], board: BoardState, selected: Set<string>): MapNode[] {
+  const prevById = new Map(prev.map((n) => [n.id, n]))
+
+  const regions: RegionNode[] = Object.values(board.regions).map((region) => {
+    const id = `region:${region.id}`
+    const old = prevById.get(id)
+    return {
+      ...(old as RegionNode | undefined),
+      id,
+      type: "region",
+      position: { x: region.x, y: region.y },
+      data: { region },
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      zIndex: -1,
+    }
+  })
+
+  const cards: CardNode[] = Object.values(board.cards).map((card) => {
+    const old = prevById.get(card.id) as CardNode | undefined
+    return {
+      ...old,
+      id: card.id,
+      type: "card",
+      position: old?.dragging ? old.position : { x: card.x, y: card.y },
+      data: { card, entering: !!board.entering[card.id] },
+      selected: selected.has(card.id),
+    }
+  })
+
+  return [...regions, ...cards]
+}
+
 // ---- the map ---------------------------------------------------------------
 
 type Props = {
@@ -135,51 +148,28 @@ type Props = {
   selectedIds: string[]
   onSelect: (ids: string[]) => void
   onError: (message: string) => void
+  tabs: ReactNode
+  // The viewport the map had when it was last left, so switching views keeps your place.
+  viewport: Viewport | null
+  onLeave: (viewport: Viewport) => void
 }
 
-export function MapView({ board, actions, selectedIds, onSelect, onError }: Props) {
-  const { screenToFlowPosition, fitView } = useReactFlow()
+export function MapView({ board, actions, selectedIds, onSelect, onError, tabs, viewport, onLeave }: Props) {
+  const { screenToFlowPosition, fitView, getViewport } = useReactFlow()
   const wrapper = useRef<HTMLDivElement>(null)
-  const [nodes, setNodes] = useState<MapNode[]>([])
   const [draft, setDraft] = useState<{ x: number; y: number } | null>(null)
   const selected = useMemo(() => new Set(selectedIds), [selectedIds])
+
+  // Build the first nodes during the first render, with the current selection already
+  // on them. Starting empty and filling them in an effect made React Flow report an
+  // empty selection first when the map mounted with cards already selected (coming back
+  // from Focus or Outline), and the two selections undid each other until React bailed.
+  const [nodes, setNodes] = useState<MapNode[]>(() => buildNodes([], board, selected))
 
   // Rebuild nodes from the board, keeping React Flow's bookkeeping (measured size,
   // in-flight drag position) from the previous node objects.
   useEffect(() => {
-    setNodes((prev) => {
-      const prevById = new Map(prev.map((n) => [n.id, n]))
-
-      const regions: RegionNode[] = Object.values(board.regions).map((region) => {
-        const id = `region:${region.id}`
-        const old = prevById.get(id)
-        return {
-          ...(old as RegionNode | undefined),
-          id,
-          type: "region",
-          position: { x: region.x, y: region.y },
-          data: { region },
-          draggable: false,
-          selectable: false,
-          focusable: false,
-          zIndex: -1,
-        }
-      })
-
-      const cards: CardNode[] = Object.values(board.cards).map((card) => {
-        const old = prevById.get(card.id) as CardNode | undefined
-        return {
-          ...old,
-          id: card.id,
-          type: "card",
-          position: old?.dragging ? old.position : { x: card.x, y: card.y },
-          data: { card, entering: !!board.entering[card.id] },
-          selected: selected.has(card.id),
-        }
-      })
-
-      return [...regions, ...cards]
-    })
+    setNodes((prev) => buildNodes(prev, board, selected))
   }, [board.cards, board.regions, board.entering, selected])
 
   const edges = useMemo<TypedEdge[]>(
@@ -200,7 +190,7 @@ export function MapView({ board, actions, selectedIds, onSelect, onError }: Prop
 
   // Fit the board once, after the first snapshot has been measured.
   const initialized = useNodesInitialized()
-  const fitted = useRef(false)
+  const fitted = useRef(viewport !== null)
   useEffect(() => {
     if (initialized && board.ready && !fitted.current && nodes.length > 0) {
       fitted.current = true
@@ -208,14 +198,33 @@ export function MapView({ board, actions, selectedIds, onSelect, onError }: Prop
     }
   }, [initialized, board.ready, nodes.length, fitView])
 
-  const onNodesChange = useCallback(
-    (changes: NodeChange<MapNode>[]) => setNodes((ns) => applyNodeChanges(changes, ns)),
-    [],
-  )
+  // Remember the viewport when the map unmounts (another view was chosen). The React
+  // Flow store lives in App's provider, so it is still readable here.
+  const leave = useRef(() => onLeave(getViewport()))
+  leave.current = () => onLeave(getViewport())
+  useEffect(() => () => leave.current(), [])
 
-  const onSelectionChange = useCallback(
-    ({ nodes }: OnSelectionChangeParams<MapNode>) =>
-      onSelect(nodes.filter((n) => n.type === "card").map((n) => n.id)),
+  // Selection flows one way: React Flow reports what the user clicked as `select` node
+  // changes (click, shift or cmd click, box select, pane click), and we pass it up. Its
+  // onSelectionChange also fires whenever the nodes prop syncs into its store (on mount
+  // with an empty store, say), and feeding that back made the two selections chase each
+  // other forever when the map mounted with cards already selected.
+  const selectedRef = useRef(selectedIds)
+  selectedRef.current = selectedIds
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange<MapNode>[]) => {
+      setNodes((ns) => applyNodeChanges(changes, ns))
+
+      const picks = changes.filter((c): c is NodeSelectionChange => c.type === "select")
+      if (picks.length === 0) return
+      const next = new Set(selectedRef.current)
+      for (const pick of picks) {
+        if (pick.selected) next.add(pick.id)
+        else next.delete(pick.id)
+      }
+      onSelect([...next].filter((id) => !id.startsWith("region:")))
+    },
     [onSelect],
   )
 
@@ -261,25 +270,12 @@ export function MapView({ board, actions, selectedIds, onSelect, onError }: Prop
 
   return (
     <div className="tb-board-wrap flex min-h-0 flex-col">
-      <div className="tb-board-head flex flex-wrap items-center gap-2.5">
-        <div className="tb-tabs" role="tablist">
-          <button role="tab" aria-selected="true">
-            Map
-          </button>
-        </div>
+      <BoardHead tabs={tabs}>
         <button className="tb-btn" onClick={onNewCard} disabled={!board.ready}>
           + Card
         </button>
         <span className="tb-hint">double-click the map to add · shift-click to select several</span>
-        <div className="tb-legend ml-auto flex flex-wrap gap-2.5">
-          {(["idea", "question", "decision", "source", "objection"] as const).map((k) => (
-            <span key={k}>
-              <i style={{ background: `var(--${k})` }} />
-              {k[0].toUpperCase() + k.slice(1)}
-            </span>
-          ))}
-        </div>
-      </div>
+      </BoardHead>
 
       <div ref={wrapper} className="tb-map relative min-h-0 flex-1" onDoubleClick={onDoubleClick}>
         <svg className="absolute h-0 w-0" aria-hidden>
@@ -310,7 +306,6 @@ export function MapView({ board, actions, selectedIds, onSelect, onError }: Prop
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
-          onSelectionChange={onSelectionChange}
           onNodeDragStop={onNodeDragStop}
           multiSelectionKeyCode={["Shift", "Meta"]}
           nodesConnectable={false}
@@ -318,6 +313,7 @@ export function MapView({ board, actions, selectedIds, onSelect, onError }: Prop
           deleteKeyCode={null}
           minZoom={0.2}
           maxZoom={2}
+          defaultViewport={viewport ?? undefined}
         >
           <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="var(--line)" />
           <Controls showInteractive={false} />

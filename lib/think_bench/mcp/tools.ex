@@ -133,7 +133,7 @@ defmodule ThinkBench.Mcp.Tools do
   end
 
   def update_card(input, context) do
-    changes = Map.take(input.arguments, [:title, :body, :tags, :status])
+    changes = Map.take(input.arguments, [:title, :body, :tags, :status, :pinned])
 
     with {:ok, actor} <- actor(input, context),
          :ok <- require_changes(changes),
@@ -230,7 +230,7 @@ defmodule ThinkBench.Mcp.Tools do
   defp require_changes(changes) when map_size(changes) > 0, do: :ok
 
   defp require_changes(_changes),
-    do: invalid(:id, "pass at least one of title, body, tags or status to change")
+    do: invalid(:id, "pass at least one of title, body, tags, status or pinned to change")
 
   defp find_link(%{id: id}) when is_binary(id), do: Ash.get(Link, id)
 
