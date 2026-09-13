@@ -34,8 +34,8 @@ AI as a thinking partner rather than a task-doer.
    Lift the data model; build the app.
 3. **Stack:** Elixir, Phoenix, Ash, AshPostgres, ash_events for the event log.
    Phoenix Channels so the board updates live when the AI writes. MCP server over the
-   Ash actions (AshAI's or a standalone library). React 19, Vite, TypeScript,
-   Tailwind, shadcn. React Flow for the map view. Ash resources are the single
+   Ash actions (AshAI's or a standalone library). React 19, TypeScript,
+   Tailwind. React Flow for the map view. Bundled by Phoenix's esbuild (no Vite). Ash resources are the single
    interface: the UI calls the same actions the MCP tools expose.
    Robert works in Elixir and Ash regularly, so this is a build, not a learning
    project.
