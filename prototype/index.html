@@ -1,0 +1,597 @@
+<title>Think Bench</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --ground: #EEF0EC;
+  --panel: #F8F9F7;
+  --panel-2: #E4E7E2;
+  --line: #CDD2CB;
+  --line-strong: #A9B0A7;
+  --ink: #1B201E;
+  --ink-2: #4B5450;
+  --ink-3: #7B857F;
+  --accent: #2456D9;
+  --accent-soft: #D9E2FB;
+  --accent-ink: #163A99;
+  --term-bg: #1A1E1C;
+  --term-ink: #D8DDD6;
+  --term-dim: #8C958F;
+  --term-you: #F2C94C;
+  --term-tool: #7FB5A0;
+  --idea: #B7791F;      --idea-bg: #FBEFD5;
+  --question: #6B4BC7;  --question-bg: #E9E2FA;
+  --decision: #2E7D4F;  --decision-bg: #D9F0E1;
+  --source: #4A6483;    --source-bg: #DFE7F0;
+  --objection: #B23F2E; --objection-bg: #F8DDD7;
+  --shadow: 0 1px 2px rgba(20,30,25,.08), 0 6px 18px rgba(20,30,25,.08);
+  --radius: 6px;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #141715; --panel: #1C201E; --panel-2: #232825;
+    --line: #2F3532; --line-strong: #46504B;
+    --ink: #E6E9E4; --ink-2: #B4BBB6; --ink-3: #7F8883;
+    --accent: #7A9BFF; --accent-soft: #223260; --accent-ink: #C9D6FF;
+    --term-bg: #0F1211; --term-ink: #D8DDD6; --term-dim: #7C857F;
+    --idea: #E6B04A; --idea-bg: #3A2E14;
+    --question: #A88CF0; --question-bg: #2A2245;
+    --decision: #5FC486; --decision-bg: #163B27;
+    --source: #8FB0D6; --source-bg: #1E2C3B;
+    --objection: #E87A68; --objection-bg: #3F1E19;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #141715; --panel: #1C201E; --panel-2: #232825;
+  --line: #2F3532; --line-strong: #46504B;
+  --ink: #E6E9E4; --ink-2: #B4BBB6; --ink-3: #7F8883;
+  --accent: #7A9BFF; --accent-soft: #223260; --accent-ink: #C9D6FF;
+  --term-bg: #0F1211; --term-ink: #D8DDD6; --term-dim: #7C857F;
+  --idea: #E6B04A; --idea-bg: #3A2E14;
+  --question: #A88CF0; --question-bg: #2A2245;
+  --decision: #5FC486; --decision-bg: #163B27;
+  --source: #8FB0D6; --source-bg: #1E2C3B;
+  --objection: #E87A68; --objection-bg: #3F1E19;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: var(--sans); font-size: 14px; line-height: 1.45;
+  padding-block: 0; padding-inline: 16px;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { display: grid; grid-template-rows: auto 1fr; height: 100vh; max-width: 1600px; margin: 0 auto; gap: 10px; padding-block: 10px; }
+.topbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-size: 16px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+.brand .doc { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.actors { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 12px; color: var(--ink-2); }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+.spacer { flex: 1; }
+.controls { display: flex; gap: 6px; align-items: center; }
+.btn { padding: 6px 11px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); font-weight: 500; font-size: 13px; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { border-color: transparent; color: var(--ink-2); }
+.btn[disabled] { opacity: .45; cursor: default; }
+
+.workspace { display: grid; grid-template-columns: 380px 1fr 320px; gap: 10px; min-height: 0; }
+@media (max-width: 1100px) { .workspace { grid-template-columns: 1fr; grid-auto-rows: minmax(360px, auto); } .app { height: auto; } }
+
+/* Terminal */
+.term { background: var(--term-bg); color: var(--term-ink); border-radius: 8px; display: flex; flex-direction: column; min-height: 0; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; }
+.term-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.07); color: var(--term-dim); font-size: 11px; }
+.term-head .lights { display: flex; gap: 5px; } .term-head .lights i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); display: block; }
+.term-body { flex: 1; overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.msg { white-space: pre-wrap; word-break: break-word; }
+.msg.you { color: var(--term-ink); } .msg.you::before { content: "❯ "; color: var(--term-you); }
+.msg.ai { color: var(--term-ink); } .msg.ai::before { content: "⏺ "; color: var(--term-dim); }
+.msg.tool { color: var(--term-tool); padding-left: 16px; font-size: 12px; }
+.msg.tool b { font-weight: 600; color: var(--term-tool); }
+.msg.tool .arg { color: var(--term-dim); }
+.msg.ctx { color: var(--term-dim); font-size: 11.5px; padding-left: 16px; }
+.msg.ctx span { color: var(--accent); }
+.term-foot { border-top: 1px solid rgba(255,255,255,.07); padding: 8px 12px; color: var(--term-dim); font-size: 11.5px; display: flex; gap: 8px; align-items: center; }
+.term-foot .cursor { display: inline-block; width: 7px; height: 14px; background: var(--term-ink); animation: blink 1.1s steps(1) infinite; vertical-align: text-bottom; }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .term-foot .cursor { animation: none; } .card { transition: none !important; } }
+
+/* Board */
+.board-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; min-height: 0; }
+.board-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; background: var(--panel-2); border-radius: var(--radius); padding: 2px; }
+.tabs button { padding: 4px 12px; border-radius: 4px; font-size: 13px; color: var(--ink-2); font-weight: 500; }
+.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-2); margin-left: auto; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.board { position: relative; flex: 1; overflow: auto; background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 22px 22px; min-height: 0; }
+.canvas { position: relative; width: 1400px; height: 900px; }
+svg.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+svg.links path { fill: none; stroke: var(--line-strong); stroke-width: 1.5; }
+svg.links path.hl { stroke: var(--accent); stroke-width: 2; }
+svg.links text { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-3); }
+svg.links text.hl { fill: var(--accent-ink); }
+svg.links .lbl-bg { fill: var(--panel); }
+.card {
+  position: absolute; width: 220px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); cursor: grab; user-select: none; transition: transform .25s ease, opacity .3s ease, box-shadow .15s;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.card:active { cursor: grabbing; }
+.card.enter { animation: pop .35s ease; }
+@keyframes pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.card .stripe { height: 4px; }
+.card .kind { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 7px 10px 0; display: flex; justify-content: space-between; align-items: center; }
+.card .kind .by { letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+.card h3 { margin: 4px 10px 6px; font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+.card p { margin: 0 10px 9px; font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+.card .meta { display: flex; gap: 6px; padding: 0 10px 8px; flex-wrap: wrap; }
+.card .tag { font-family: var(--mono); font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--panel-2); color: var(--ink-2); }
+.card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow); }
+.card.resolved { opacity: .62; }
+.card.resolved h3 { text-decoration: line-through; text-decoration-color: var(--ink-3); }
+.card.proposed { border-style: dashed; border-color: var(--line-strong); background: transparent; backdrop-filter: blur(2px); }
+.card.proposed .stripe { opacity: .5; }
+.card .propose-bar { display: flex; gap: 6px; padding: 6px 10px 9px; border-top: 1px dashed var(--line); }
+.card .propose-bar button { font-size: 11.5px; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--line-strong); }
+.card .propose-bar button.ok { background: var(--accent); color: #fff; border-color: var(--accent); }
+.k-idea .stripe { background: var(--idea); } .k-idea .kind { color: var(--idea); }
+.k-question .stripe { background: var(--question); } .k-question .kind { color: var(--question); }
+.k-decision .stripe { background: var(--decision); } .k-decision .kind { color: var(--decision); }
+.k-source .stripe { background: var(--source); } .k-source .kind { color: var(--source); }
+.k-objection .stripe { background: var(--objection); } .k-objection .kind { color: var(--objection); }
+.adorn { position: absolute; border: 1px dashed var(--line-strong); border-radius: 10px; padding: 6px 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; pointer-events: none; }
+
+/* Focus */
+.focus { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: auto; }
+.focus.show { display: flex; }
+.plex { position: relative; flex: 1; min-height: 520px; }
+.plex svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.plex svg path { fill: none; stroke: var(--line-strong); stroke-width: 1.5; }
+.plex svg text { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-3); }
+.plex svg .lbl-bg { fill: var(--panel); }
+.tier { position: absolute; left: 0; right: 0; display: flex; justify-content: center; gap: 14px; padding: 0 16px; flex-wrap: wrap; }
+.tier.parents { top: 22px; } .tier.children { bottom: 22px; }
+.tier.jumps { right: 24px; left: auto; top: 50%; transform: translateY(-50%); flex-direction: column; align-items: flex-end; }
+.tier-label { position: absolute; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.fcard { width: 200px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer; overflow: hidden; text-align: left; padding: 0; }
+.fcard:hover { border-color: var(--ink-3); }
+.fcard .stripe { height: 4px; }
+.fcard .kind { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 6px 9px 0; }
+.fcard h3 { margin: 3px 9px 7px; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.fcard .rel { font-family: var(--mono); font-size: 10px; color: var(--ink-3); padding: 0 9px 7px; }
+.fcard.resolved h3 { text-decoration: line-through; color: var(--ink-3); }
+.centre { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 300px; background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow); overflow: hidden; }
+.centre .stripe { height: 5px; }
+.centre .kind { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; padding: 9px 14px 0; display: flex; justify-content: space-between; }
+.centre .kind .by { letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+.centre h3 { margin: 5px 14px 6px; font-size: 16px; font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.centre p { margin: 0 14px 12px; font-size: 12.5px; color: var(--ink-2); }
+.trail { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
+.trail button { color: var(--ink-2); padding: 2px 6px; border-radius: 3px; background: var(--panel-2); font-family: var(--mono); font-size: 11px; }
+.trail button:hover { color: var(--ink); }
+.trail .sep { color: var(--line-strong); }
+.pins { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.pins button { background: var(--accent-soft); color: var(--accent-ink); }
+.focus-empty { padding: 40px; color: var(--ink-3); text-align: center; }
+
+/* Outline */
+.outline { padding: 12px 14px; overflow: auto; flex: 1; display: none; }
+.outline.show { display: block; }
+.board.hide { display: none; }
+.ogroup { margin-bottom: 14px; }
+.ogroup h4 { margin: 0 0 6px; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.ogroup h4 i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.orow { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 6px 8px; border-radius: 4px; cursor: pointer; align-items: start; }
+.orow:hover { background: var(--panel-2); }
+.orow.selected { background: var(--accent-soft); }
+.orow .t { font-weight: 600; font-size: 13px; }
+.orow .t.done { text-decoration: line-through; color: var(--ink-3); }
+.orow .l { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.orow .l b { color: var(--ink-2); font-weight: 500; }
+.orow .by { font-family: var(--mono); font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+
+/* Inspector */
+.inspector { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.pane h2 { margin: 0 0 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.pane h2 .n { margin-left: auto; background: var(--panel-2); color: var(--ink-2); padding: 0 6px; border-radius: 3px; font-variant-numeric: tabular-nums; }
+.sel-empty { color: var(--ink-3); font-size: 13px; }
+.sel h3 { margin: 0 0 4px; font-size: 14px; }
+.sel .kindline { font-family: var(--mono); font-size: 11px; margin-bottom: 8px; }
+.sel p { margin: 0 0 8px; font-size: 12.5px; color: var(--ink-2); }
+.kv { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; font-size: 12px; }
+.kv dt { color: var(--ink-3); font-family: var(--mono); font-size: 11px; } .kv dd { margin: 0; }
+.kv dd .lk { font-family: var(--mono); font-size: 11px; color: var(--ink-2); display: block; }
+.kv dd .lk b { color: var(--accent-ink); font-weight: 500; }
+.events { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.ev { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; }
+.ev i { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; display: block; }
+.ev .who { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.ev.unseen .who::after { content: " · unseen"; color: var(--accent); }
+.tools { font-family: var(--mono); font-size: 11.5px; display: flex; flex-direction: column; gap: 5px; }
+.tools div { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+.tools .t { color: var(--accent-ink); font-weight: 500; } .tools .d { color: var(--ink-2); }
+.decide ol { margin: 0; padding-left: 18px; font-size: 12.5px; display: flex; flex-direction: column; gap: 6px; }
+.decide li b { font-weight: 600; }
+.empty-note { color: var(--ink-3); font-size: 12px; }
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><h1>Think Bench</h1><span class="doc">boards/think-bench.tb · prototype</span></div>
+    <div class="actors">
+      <span class="chip"><span class="dot" style="background:var(--term-you)"></span>You</span>
+      <span class="chip"><span class="dot" style="background:var(--accent)"></span>Claude Code · thinking partner</span>
+      <span class="chip"><span class="dot" style="background:var(--objection)"></span>Claude Code · skeptic <span style="color:var(--ink-3)">(idle)</span></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="controls">
+      <span id="stepLabel" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3)">turn 0 / 5</span>
+      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn primary" id="stepBtn">Next turn ›</button>
+      <button class="btn ghost" id="themeBtn" title="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <section class="term" aria-label="Claude Code transcript">
+      <div class="term-head"><span class="lights"><i></i><i></i><i></i></span> claude · ~/Projects/startups/think-bench · mcp: think-bench ✓</div>
+      <div class="term-body" id="termBody">
+        <div class="msg ctx">session start · <span>read_board</span> → 0 cards. Board is empty; starting fresh.</div>
+      </div>
+      <div class="term-foot">❯ <span class="cursor"></span><span style="margin-left:auto">press Next turn to play the conversation</span></div>
+    </section>
+
+    <section class="board-wrap" aria-label="Board">
+      <div class="board-head">
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-view="map">Map</button>
+          <button role="tab" aria-selected="false" data-view="focus">Focus</button>
+          <button role="tab" aria-selected="false" data-view="outline">Outline</button>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--idea)"></i>Idea</span>
+          <span><i style="background:var(--question)"></i>Question</span>
+          <span><i style="background:var(--decision)"></i>Decision</span>
+          <span><i style="background:var(--source)"></i>Source</span>
+          <span><i style="background:var(--objection)"></i>Objection</span>
+        </div>
+      </div>
+      <div class="board" id="board">
+        <div class="canvas" id="canvas">
+          <svg class="links" id="links"></svg>
+        </div>
+      </div>
+      <div class="focus" id="focus"><div class="plex" id="plex"></div><div class="trail" id="trail"></div></div>
+      <div class="outline" id="outline"></div>
+    </section>
+
+    <aside class="inspector">
+      <div class="pane">
+        <h2>Selection <span class="n" id="selCount">none</span></h2>
+        <div id="selBody" class="sel-empty">Click a card. Whatever is selected is what the AI sees when you say “this one”.</div>
+      </div>
+      <div class="pane">
+        <h2>Changes since AI last looked <span class="n" id="evCount">0</span></h2>
+        <div class="events" id="events"><div class="empty-note">Nothing yet.</div></div>
+      </div>
+      <div class="pane">
+        <h2>Tools the AI called <span class="n" id="toolCount">0</span></h2>
+        <div class="tools" id="tools"><div class="empty-note">The whole API the AI has. Eight verbs.</div></div>
+      </div>
+      <div class="pane decide">
+        <h2>To decide together</h2>
+        <ol>
+          <li><b>Card kinds.</b> Idea, Question, Decision, Source, Objection. Enough? Too many?</li>
+          <li><b>Proposed vs direct.</b> Turn 4 shows a dashed “proposed” card you accept. Do you want that gate, or should the AI write directly?</li>
+          <li><b>Resolution.</b> A Decision that answers a Question dims the question. Right behaviour, or archive it?</li>
+          <li><b>Regions.</b> The dashed region groups a theme. Do regions matter, or are links and tags enough?</li>
+          <li><b>Map vs Focus vs Outline.</b> Which do you reach for first? Focus is TheBrain's Plex: one centre, parents above, children below, jumps aside.</li>
+          <li><b>Link grammar.</b> Focus maps every link to parent, child or jump, with the label as a second layer. Is that the base model, or are free labels enough?</li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (s, el = document) => el.querySelector(s);
+  const canvas = $('#canvas'), linksSvg = $('#links'), termBody = $('#termBody');
+  const state = { cards: [], links: [], regions: [], events: [], tools: [], selected: null, turn: 0, lastLook: 0 };
+  const KIND_COLOR = { idea: 'var(--idea)', question: 'var(--question)', decision: 'var(--decision)', source: 'var(--source)', objection: 'var(--objection)' };
+
+  // ---- scripted conversation ------------------------------------------
+  const script = [
+    { you: `I want an app where AI and I share a board next to chat. Sticky notes, whiteboard, that kind of room, but the other people are agents.`,
+      ai: `Got it. I'll capture the core idea and the first question it raises, then we can keep talking.`,
+      ops: [
+        { tool: 'create_card', card: { id: 'c1', kind: 'idea', title: 'Shared board beside chat', body: 'A visual space both of us can read and write, alongside the conversation.', x: 80, y: 80, by: 'ai', tags: ['core'] } },
+        { tool: 'create_card', card: { id: 'c2', kind: 'question', title: 'Source of truth: board or chat?', body: 'If both can change things, which one wins when they disagree?', x: 380, y: 60, by: 'ai' } },
+        { tool: 'link', from: 'c2', to: 'c1', type: 'raised-by' },
+      ]},
+    { you: `Chat is primary. The board is a visual memory of what happened in chat and a way to organise ideas. I don't need the AI watching in real time.`,
+      ai: `That settles the question. Recording it as a decision and resolving the open question. This also removes the whole "idle loop" problem.`,
+      ops: [
+        { tool: 'create_card', card: { id: 'c3', kind: 'decision', title: 'Chat is primary; board is memory', body: 'Turn-based. The AI updates the board as the conversation produces ideas, decisions and questions.', x: 380, y: 250, by: 'ai', tags: ['settled'] } },
+        { tool: 'link', from: 'c3', to: 'c2', type: 'answers' },
+        { tool: 'update_card', id: 'c2', patch: { status: 'resolved' } },
+        { tool: 'create_card', card: { id: 'c4', kind: 'idea', title: 'Board as cross-session memory', body: 'A new session starts by reading the board, not the transcript.', x: 80, y: 300, by: 'ai' } },
+        { tool: 'link', from: 'c4', to: 'c3', type: 'follows-from' },
+      ]},
+    { you: `One constraint: I'd rather use my Claude subscription than pay API costs.`,
+      ai: `I checked the docs. Headless Claude and the Agent SDK require an API key, and subscription OAuth is limited to Claude Code and claude.ai. So the app can't drive Claude. But Claude Code can drive the app over MCP, on the subscription. Capturing both.`,
+      ops: [
+        { tool: 'create_card', card: { id: 'c5', kind: 'source', title: 'Agent SDK docs: no subscription auth', body: '“Anthropic does not allow third party developers to offer claude.ai login or rate limits for their products.”', x: 720, y: 60, by: 'ai', tags: ['docs'] } },
+        { tool: 'create_card', card: { id: 'c6', kind: 'objection', title: 'App cannot host the model on a subscription', body: 'Any design where the app launches Claude sessions pays API rates.', x: 720, y: 250, by: 'ai' } },
+        { tool: 'link', from: 'c6', to: 'c5', type: 'cites' },
+        { tool: 'create_card', card: { id: 'c7', kind: 'decision', title: 'Invert it: app is an MCP server, Claude Code is the client', body: 'Chat stays in the terminal on the subscription. The board is a tool Claude connects to.', x: 720, y: 440, by: 'ai', tags: ['settled', 'architecture'] } },
+        { tool: 'link', from: 'c7', to: 'c6', type: 'resolves' },
+        { tool: 'link', from: 'c7', to: 'c3', type: 'depends-on' },
+        { tool: 'create_region', region: { id: 'r1', title: 'Model hosting', x: 700, y: 20, w: 270, h: 560 } },
+      ]},
+    { you: `What's the risk with this one?`,
+      ctx: 'c7',
+      ai: `Looking at the selected card. The main risk is that Claude Code's context resets each session, so the board has to carry everything. I'll propose an objection rather than just add it, since it's my judgement rather than something you said.`,
+      ops: [
+        { tool: 'read_selection', id: 'c7' },
+        { tool: 'propose_card', card: { id: 'c8', kind: 'objection', title: 'Each session starts cold', body: 'Claude Code forgets the last conversation. The board must be complete enough to stand in for it.', x: 380, y: 470, by: 'ai', proposed: true } },
+        { tool: 'link', from: 'c8', to: 'c7', type: 'challenges' },
+      ]},
+    { you: `Check the board, I moved some things around and added a card.`,
+      ai: `Reading changes since I last looked. You moved “Board as cross-session memory” next to the objection and added a question about voice capture. That grouping makes sense: memory is the answer to the cold-start problem. I linked them.`,
+      pre: [
+        { user: true, tool: 'move_card', id: 'c4', x: 80, y: 480 },
+        { user: true, tool: 'create_card', card: { id: 'c9', kind: 'question', title: 'Voice capture from my phone?', body: 'Ideas arrive away from the desk. How do they get onto the board?', x: 80, y: 650, by: 'you' } },
+      ],
+      ops: [
+        { tool: 'changes_since', n: 2 },
+        { tool: 'link', from: 'c4', to: 'c8', type: 'answers' },
+        { tool: 'update_card', id: 'c8', patch: { status: 'resolved' } },
+      ]},
+  ];
+
+  // ---- rendering --------------------------------------------------------
+  const CW = 220;
+  function cardEl(c) {
+    let el = document.getElementById(c.id);
+    if (!el) {
+      el = document.createElement('div'); el.id = c.id; el.className = 'card enter'; el.tabIndex = 0;
+      canvas.appendChild(el);
+      el.addEventListener('pointerdown', startDrag);
+      el.addEventListener('click', e => { if (!el.dataset.dragged) select(c.id); el.dataset.dragged = ''; });
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') select(c.id); });
+    }
+    el.className = `card k-${c.kind}` + (c.status === 'resolved' ? ' resolved' : '') + (c.proposed ? ' proposed' : '') + (state.selected === c.id ? ' selected' : '');
+    el.style.left = c.x + 'px'; el.style.top = c.y + 'px';
+    el.innerHTML = `<div class="stripe"></div>
+      <div class="kind"><span>${c.kind}${c.proposed ? ' · proposed' : ''}${c.status === 'resolved' ? ' · resolved' : ''}</span><span class="by">${c.by === 'ai' ? 'claude' : 'you'}</span></div>
+      <h3>${c.title}</h3><p>${c.body}</p>
+      ${c.tags && c.tags.length ? `<div class="meta">${c.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+      ${c.proposed ? `<div class="propose-bar"><button class="ok" data-accept="${c.id}">Accept</button><button data-dismiss="${c.id}">Dismiss</button></div>` : ''}`;
+    return el;
+  }
+  function regionEl(r) {
+    let el = document.getElementById(r.id);
+    if (!el) { el = document.createElement('div'); el.id = r.id; el.className = 'adorn'; canvas.insertBefore(el, linksSvg); }
+    Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+    el.textContent = r.title;
+  }
+  function anchor(c) { const el = document.getElementById(c.id); const h = el ? el.offsetHeight : 90; return { cx: c.x + CW / 2, cy: c.y + h / 2, w: CW, h }; }
+  function edgePoint(a, b) { // point on a's box edge toward b
+    const dx = b.cx - a.cx, dy = b.cy - a.cy; const hw = a.w / 2, hh = a.h / 2;
+    const s = Math.min(hw / Math.abs(dx || 1e-6), hh / Math.abs(dy || 1e-6));
+    return { x: a.cx + dx * s, y: a.cy + dy * s };
+  }
+  function renderLinks() {
+    let html = '<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/></marker><marker id="arrhl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker></defs>';
+    for (const l of state.links) {
+      const a = state.cards.find(c => c.id === l.from), b = state.cards.find(c => c.id === l.to); if (!a || !b) continue;
+      const A = anchor(a), B = anchor(b); const p1 = edgePoint(A, B), p2 = edgePoint(B, A);
+      const hl = state.selected && (l.from === state.selected || l.to === state.selected);
+      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      const c1x = p1.x + (p2.x - p1.x) * .5, c1y = p1.y, c2x = p1.x + (p2.x - p1.x) * .5, c2y = p2.y;
+      html += `<path class="${hl ? 'hl' : ''}" d="M${p1.x},${p1.y} C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}" marker-end="url(#${hl ? 'arrhl' : 'arr'})"/>`;
+      const tw = l.type.length * 6.6 + 10;
+      html += `<rect class="lbl-bg" x="${mx - tw / 2}" y="${my - 8}" width="${tw}" height="16" rx="3"/><text class="${hl ? 'hl' : ''}" x="${mx}" y="${my + 4}" text-anchor="middle">${l.type}</text>`;
+    }
+    linksSvg.innerHTML = html;
+  }
+  function renderAll() {
+    state.regions.forEach(regionEl);
+    state.cards.forEach(cardEl);
+    renderLinks(); renderOutline(); renderFocus(); renderInspector();
+  }
+  function renderOutline() {
+    const out = $('#outline'); const kinds = ['idea', 'question', 'decision', 'objection', 'source'];
+    out.innerHTML = kinds.map(k => {
+      const cs = state.cards.filter(c => c.kind === k); if (!cs.length) return '';
+      return `<div class="ogroup"><h4><i style="background:${KIND_COLOR[k]}"></i>${k}s <span style="color:var(--ink-3);letter-spacing:0">${cs.length}</span></h4>` +
+        cs.map(c => {
+          const ls = state.links.filter(l => l.from === c.id).map(l => `<b>${l.type}</b> → ${state.cards.find(x => x.id === l.to)?.title}`);
+          return `<div class="orow ${state.selected === c.id ? 'selected' : ''}" data-sel="${c.id}" tabindex="0"><div><div class="t ${c.status === 'resolved' ? 'done' : ''}">${c.title}${c.proposed ? ' <span class="tag">proposed</span>' : ''}</div>${ls.length ? `<div class="l">${ls.join(' · ')}</div>` : ''}</div><div class="by">${c.by === 'ai' ? 'claude' : 'you'}</div></div>`;
+        }).join('') + '</div>';
+    }).join('') || '<div class="empty-note">No cards yet.</div>';
+  }
+  // Focus view: every link type maps onto TheBrain's grammar. A link from A to B with a
+  // hierarchical type means B is A's parent. Lateral types are jumps.
+  const GRAMMAR = { 'raised-by': 'up', 'answers': 'up', 'follows-from': 'up', 'depends-on': 'up', 'resolves': 'up', 'challenges': 'up', 'cites': 'jump' };
+  const trail = [];
+  let focusId = null;
+  function setFocus(id, push = true) {
+    if (!id) return; if (push && focusId && focusId !== id) { trail.push(focusId); if (trail.length > 8) trail.shift(); }
+    focusId = id; state.selected = id; renderAll();
+  }
+  function fcard(c, rel) {
+    return `<button class="fcard k-${c.kind} ${c.status === 'resolved' ? 'resolved' : ''}" data-focus="${c.id}"><div class="stripe"></div><div class="kind">${c.kind}</div><h3>${c.title}</h3><div class="rel">${rel}</div></button>`;
+  }
+  function renderFocus() {
+    const plex = $('#plex'); const c = state.cards.find(x => x.id === focusId);
+    if (!c) { plex.innerHTML = '<div class="focus-empty">Select a card in Map or Outline, then open Focus.</div>'; $('#trail').innerHTML = ''; return; }
+    const parents = [], children = [], jumps = [];
+    for (const l of state.links) {
+      const g = GRAMMAR[l.type] || 'jump';
+      if (l.from === c.id) { const o = state.cards.find(x => x.id === l.to); if (!o) continue; (g === 'up' ? parents : jumps).push({ o, rel: `${l.type} →` }); }
+      else if (l.to === c.id) { const o = state.cards.find(x => x.id === l.from); if (!o) continue; (g === 'up' ? children : jumps).push({ o, rel: `← ${l.type}` }); }
+    }
+    plex.innerHTML = `<svg id="plexLines"></svg>
+      <span class="tier-label" style="top:6px;left:16px">parents · ${parents.length}</span>
+      <div class="tier parents">${parents.map(p => fcard(p.o, p.rel)).join('') || '<span class="empty-note" style="padding-top:22px">no parents · this is a root</span>'}</div>
+      <div class="centre k-${c.kind}"><div class="stripe"></div><div class="kind"><span>${c.kind}${c.status === 'resolved' ? ' · resolved' : ''}${c.proposed ? ' · proposed' : ''}</span><span class="by">${c.by === 'ai' ? 'claude' : 'you'} · turn ${c.turn}</span></div><h3>${c.title}</h3><p>${c.body}</p></div>
+      <span class="tier-label" style="top:50%;right:16px;transform:translateY(-100%);margin-top:-${Math.max(1, jumps.length) * 40 + 6}px">jumps · ${jumps.length}</span>
+      <div class="tier jumps">${jumps.map(j => fcard(j.o, j.rel)).join('')}</div>
+      <span class="tier-label" style="bottom:6px;left:16px">children · ${children.length}</span>
+      <div class="tier children">${children.map(k => fcard(k.o, k.rel)).join('') || '<span class="empty-note" style="padding-bottom:22px">no children yet</span>'}</div>`;
+    // lines from centre to each neighbour
+    requestAnimationFrame(() => {
+      const svg = $('#plexLines'); if (!svg) return; const pr = plex.getBoundingClientRect(); const ce = plex.querySelector('.centre').getBoundingClientRect();
+      const cx = ce.left - pr.left + ce.width / 2, cy = ce.top - pr.top + ce.height / 2;
+      let html = '';
+      plex.querySelectorAll('.fcard').forEach(el => {
+        const r = el.getBoundingClientRect(); const x = r.left - pr.left + r.width / 2, y = r.top - pr.top + r.height / 2;
+        const inJumps = el.closest('.jumps');
+        const sx = inJumps ? ce.right - pr.left : cx, sy = inJumps ? cy : (y < cy ? ce.top - pr.top : ce.bottom - pr.top);
+        const ex = inJumps ? r.left - pr.left : x, ey = inJumps ? y : (y < cy ? r.bottom - pr.top : r.top - pr.top);
+        html += inJumps ? `<path d="M${sx},${sy} C${(sx + ex) / 2},${sy} ${(sx + ex) / 2},${ey} ${ex},${ey}"/>` : `<path d="M${sx},${sy} C${sx},${(sy + ey) / 2} ${ex},${(sy + ey) / 2} ${ex},${ey}"/>`;
+      });
+      svg.innerHTML = html;
+    });
+    const pins = ['c3', 'c7'].filter(id => state.cards.some(x => x.id === id));
+    $('#trail').innerHTML = `<span>past</span> ${trail.map(id => `<button data-focus="${id}">${state.cards.find(x => x.id === id)?.title ?? id}</button>`).join('<span class="sep">›</span>') || '<span class="sep">none yet · click a neighbour to move</span>'}
+      <span class="pins"><span>pins</span>${pins.map(id => `<button data-focus="${id}">${state.cards.find(x => x.id === id).title}</button>`).join('')}</span>`;
+  }
+  $('#focus').addEventListener('click', e => { const b = e.target.closest('[data-focus]'); if (b) setFocus(b.dataset.focus); });
+  function renderInspector() {
+    const c = state.cards.find(x => x.id === state.selected);
+    $('#selCount').textContent = c ? '1' : 'none';
+    const sb = $('#selBody');
+    if (!c) { sb.className = 'sel-empty'; sb.textContent = 'Click a card. Whatever is selected is what the AI sees when you say “this one”.'; }
+    else {
+      const outL = state.links.filter(l => l.from === c.id).map(l => `<span class="lk"><b>${l.type}</b> → ${state.cards.find(x => x.id === l.to)?.title}</span>`).join('');
+      const inL = state.links.filter(l => l.to === c.id).map(l => `<span class="lk">${state.cards.find(x => x.id === l.from)?.title} <b>${l.type}</b> →</span>`).join('');
+      sb.className = 'sel';
+      sb.innerHTML = `<div class="kindline" style="color:${KIND_COLOR[c.kind]}">${c.kind.toUpperCase()}${c.status ? ' · ' + c.status : ''}${c.proposed ? ' · proposed' : ''}</div><h3>${c.title}</h3><p>${c.body}</p>
+        <dl class="kv"><dt>created by</dt><dd>${c.by === 'ai' ? 'claude · turn ' + c.turn : 'you · turn ' + c.turn}</dd>
+        <dt>position</dt><dd style="font-family:var(--mono);font-size:11px">${c.x}, ${c.y}</dd>
+        ${outL ? `<dt>links out</dt><dd>${outL}</dd>` : ''}${inL ? `<dt>links in</dt><dd>${inL}</dd>` : ''}
+        ${c.tags?.length ? `<dt>tags</dt><dd>${c.tags.join(', ')}</dd>` : ''}</dl>`;
+    }
+    const evs = state.events.slice(-8).reverse();
+    $('#evCount').textContent = state.events.filter(e => e.seq > state.lastLook).length;
+    $('#events').innerHTML = evs.length ? evs.map(e => `<div class="ev ${e.seq > state.lastLook ? 'unseen' : ''}"><i style="background:${e.who === 'you' ? 'var(--term-you)' : 'var(--accent)'}"></i><div>${e.text}<div class="who">${e.who} · turn ${e.turn}</div></div></div>`).join('') : '<div class="empty-note">Nothing yet.</div>';
+    $('#toolCount').textContent = state.tools.length;
+    $('#tools').innerHTML = state.tools.length ? state.tools.slice(-10).reverse().map(t => `<div><span class="t">${t.tool}</span><span class="d">${t.desc}</span></div>`).join('') : '<div class="empty-note">The whole API the AI has. Eight verbs.</div>';
+  }
+
+  // ---- interactions -----------------------------------------------------
+  function select(id) { state.selected = state.selected === id ? null : id; if (state.selected) focusId = state.selected; renderAll(); }
+  let drag = null;
+  function startDrag(e) {
+    if (e.target.closest('button')) return;
+    const el = e.currentTarget, c = state.cards.find(x => x.id === el.id);
+    drag = { el, c, ox: e.clientX - c.x, oy: e.clientY - c.y, moved: false };
+    el.setPointerCapture(e.pointerId);
+    el.addEventListener('pointermove', onDrag); el.addEventListener('pointerup', endDrag, { once: true });
+  }
+  function onDrag(e) {
+    if (!drag) return; const nx = Math.max(0, e.clientX - drag.ox), ny = Math.max(0, e.clientY - drag.oy);
+    if (Math.abs(nx - drag.c.x) + Math.abs(ny - drag.c.y) > 3) drag.moved = true;
+    drag.c.x = Math.round(nx); drag.c.y = Math.round(ny); drag.el.style.left = drag.c.x + 'px'; drag.el.style.top = drag.c.y + 'px'; renderLinks();
+  }
+  function endDrag(e) {
+    if (!drag) return; drag.el.removeEventListener('pointermove', onDrag);
+    if (drag.moved) { drag.el.dataset.dragged = '1'; logEvent('you', `moved “${drag.c.title}”`); renderInspector(); }
+    drag = null;
+  }
+  canvas.addEventListener('click', e => {
+    const acc = e.target.closest('[data-accept]'), dis = e.target.closest('[data-dismiss]');
+    if (acc) { const c = state.cards.find(x => x.id === acc.dataset.accept); c.proposed = false; logEvent('you', `accepted “${c.title}”`); addTerm('ctx', `you accepted <span>${c.title}</span> · card committed`); renderAll(); }
+    if (dis) { const id = dis.dataset.dismiss; const c = state.cards.find(x => x.id === id); state.cards = state.cards.filter(x => x.id !== id); state.links = state.links.filter(l => l.from !== id && l.to !== id); document.getElementById(id)?.remove(); logEvent('you', `dismissed “${c.title}”`); renderAll(); }
+  });
+  $('#outline').addEventListener('click', e => { const r = e.target.closest('[data-sel]'); if (r) select(r.dataset.sel); });
+  document.querySelectorAll('.tabs [role=tab]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tabs [role=tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+    const v = b.dataset.view; $('#board').classList.toggle('hide', v !== 'map'); $('#outline').classList.toggle('show', v === 'outline'); $('#focus').classList.toggle('show', v === 'focus');
+    if (v === 'focus') { if (state.selected) focusId = state.selected; else if (!focusId) focusId = state.cards.some(c => c.id === 'c7') ? 'c7' : state.cards[0]?.id; renderFocus(); }
+  }));
+  $('#themeBtn').addEventListener('click', () => {
+    const r = document.documentElement; const cur = r.getAttribute('data-theme');
+    const sysDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = cur ? cur === 'dark' : sysDark; r.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  });
+
+  // ---- log + script playback -------------------------------------------
+  let seq = 0;
+  function logEvent(who, text) { state.events.push({ seq: ++seq, who, text, turn: state.turn }); }
+  function addTerm(cls, html) { const d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; termBody.appendChild(d); termBody.scrollTop = termBody.scrollHeight; }
+  const esc = s => s.replace(/</g, '&lt;');
+  function applyOp(op, who) {
+    const t = op.tool;
+    if (t === 'create_card' || t === 'propose_card') {
+      const c = { ...op.card, turn: state.turn }; state.cards.push(c);
+      logEvent(who, `${t === 'propose_card' ? 'proposed' : 'created'} ${c.kind} “${c.title}”`);
+      if (who === 'ai') state.tools.push({ tool: t, desc: `${c.kind}: ${c.title}` });
+      addTermTool(who, t, `kind=${c.kind} title="${c.title}"`);
+    } else if (t === 'link') {
+      state.links.push({ from: op.from, to: op.to, type: op.type });
+      const a = state.cards.find(c => c.id === op.from)?.title, b = state.cards.find(c => c.id === op.to)?.title;
+      logEvent(who, `linked “${a}” ${op.type} “${b}”`); state.tools.push({ tool: 'link', desc: `${op.type}: ${a} → ${b}` });
+      addTermTool(who, 'link', `${op.from} --${op.type}--> ${op.to}`);
+    } else if (t === 'update_card') {
+      const c = state.cards.find(x => x.id === op.id); Object.assign(c, op.patch);
+      logEvent(who, `marked “${c.title}” ${op.patch.status}`); state.tools.push({ tool: 'update_card', desc: `${c.title}: status=${op.patch.status}` });
+      addTermTool(who, 'update_card', `${op.id} status=${op.patch.status}`);
+    } else if (t === 'move_card') {
+      const c = state.cards.find(x => x.id === op.id); c.x = op.x; c.y = op.y; logEvent(who, `moved “${c.title}”`);
+    } else if (t === 'create_region') {
+      state.regions.push(op.region); logEvent(who, `drew region “${op.region.title}”`); state.tools.push({ tool: 'create_region', desc: op.region.title });
+      addTermTool(who, 'create_region', `"${op.region.title}" around c5, c6, c7`);
+    } else if (t === 'read_selection') {
+      const c = state.cards.find(x => x.id === op.id); state.tools.push({ tool: 'read_selection', desc: `→ ${c.title}` });
+      addTermTool(who, 'read_selection', `→ 1 card: "${c.title}" (${c.kind}, 2 links)`);
+    } else if (t === 'changes_since') {
+      const n = state.events.filter(e => e.seq > state.lastLook).length; state.tools.push({ tool: 'changes_since', desc: `→ ${n} events` });
+      addTermTool(who, 'changes_since', `last_look=t${state.turn - 1} → ${n} events (1 move, 1 create by you)`);
+    }
+  }
+  function addTermTool(who, tool, args) { if (who === 'ai') addTerm('tool', `<b>think-bench:${tool}</b> <span class="arg">${esc(args)}</span>`); }
+  function step() {
+    if (state.turn >= script.length) return;
+    const s = script[state.turn]; state.turn++;
+    if (s.pre) { s.pre.forEach(op => applyOp(op, 'you')); renderAll(); }
+    if (s.ctx) { state.selected = s.ctx; renderAll(); addTerm('ctx', `selection: <span>${state.cards.find(c => c.id === s.ctx).title}</span> · attached to this message`); }
+    addTerm('you', esc(s.you));
+    setTimeout(() => {
+      s.ops.forEach(op => applyOp(op, 'ai'));
+      addTerm('ai', esc(s.ai));
+      state.lastLook = seq; renderAll();
+      // mark AI's own writes as seen
+      $('#stepLabel').textContent = `turn ${state.turn} / ${script.length}`;
+      if (state.turn >= script.length) { $('#stepBtn').disabled = true; $('#stepBtn').textContent = 'End of script'; }
+    }, 350);
+    $('#stepLabel').textContent = `turn ${state.turn} / ${script.length}`;
+  }
+  function reset() {
+    state.cards = []; state.links = []; state.regions = []; state.events = []; state.tools = []; state.selected = null; state.turn = 0; state.lastLook = 0; seq = 0; trail.length = 0; focusId = null;
+    canvas.querySelectorAll('.card,.adorn').forEach(e => e.remove()); termBody.innerHTML = '<div class="msg ctx">session start · <span>read_board</span> → 0 cards. Board is empty; starting fresh.</div>';
+    $('#stepBtn').disabled = false; $('#stepBtn').textContent = 'Next turn ›'; $('#stepLabel').textContent = 'turn 0 / 5'; renderAll();
+  }
+  $('#stepBtn').addEventListener('click', step); $('#resetBtn').addEventListener('click', reset);
+  window.addEventListener('resize', () => { renderLinks(); renderFocus(); });
+
+  // open in a realistic working state: play the first three turns instantly
+  const fast = (n) => { for (let i = 0; i < n; i++) { const s = script[state.turn]; state.turn++; if (s.pre) s.pre.forEach(op => applyOp(op, 'you')); if (s.ctx) state.selected = s.ctx; addTerm('you', esc(s.you)); s.ops.forEach(op => applyOp(op, 'ai')); addTerm('ai', esc(s.ai)); state.lastLook = seq; } };
+  fast(3); renderAll(); $('#stepLabel').textContent = `turn ${state.turn} / ${script.length}`;
+  requestAnimationFrame(() => { renderLinks(); canvas.querySelectorAll('.card').forEach(c => c.classList.remove('enter')); });
+})();
+</script>
