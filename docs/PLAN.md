@@ -4,6 +4,12 @@ Companion to `DESIGN.md` (the what and why) and `prototype/index.html` (the refe
 UI). This file is the how: phases, scope, acceptance criteria, and the working
 agreement between the reviewer (Fable) and the worker (Opus).
 
+## Status (2026-09-13)
+
+Phases 0–5 built by Opus, reviewed by Fable, and pushed to `main`. Handoffs with
+verification transcripts and screenshots are in `docs/handoff/`. Phase 6 is deferred
+until Robert has used the tool for a week.
+
 ## Working agreement
 
 - **One phase per worker session.** Each phase starts in a fresh Claude Code session
