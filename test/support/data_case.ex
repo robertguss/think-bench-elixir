@@ -24,6 +24,7 @@ defmodule ThinkBench.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import ThinkBench.DataCase
+      import ThinkBench.GraphFixtures
     end
   end
 

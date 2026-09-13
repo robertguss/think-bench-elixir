@@ -44,6 +44,8 @@ defmodule ThinkBench.MixProject do
       {:req_llm, "~> 1.18"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:ash_ai, "~> 1.0"},
+      {:ash_events, "~> 0.8"},
+      {:picosat_elixir, "~> 0.2"},
       {:ash_phoenix, "~> 2.3"},
       {:ash_postgres, "~> 2.13"},
       {:ash, "~> 3.33"},
