@@ -40,13 +40,14 @@ defmodule ThinkBench.Mcp.Tools do
 
   # Reads
 
-  def read_board(input, _context) do
+  def read_board(input, context) do
     opts =
       input.arguments
       |> Map.take([:kinds, :tags, :include_archived])
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
     board = Graph.read_board(opts)
+    record_look(context, board.latest_seq)
     names = Json.actor_names()
 
     {:ok,
@@ -86,7 +87,7 @@ defmodule ThinkBench.Mcp.Tools do
     {:ok, %{card_ids: Enum.map(cards, & &1.id), cards: cards}}
   end
 
-  def changes_since(input, _context) do
+  def changes_since(input, context) do
     seq = input.arguments.seq
     # Read the head before the events: anything committed in between is returned in
     # `events`, so `latest_seq` never runs ahead of what the caller has seen.
@@ -110,6 +111,7 @@ defmodule ThinkBench.Mcp.Tools do
         last -> max(head, last.seq)
       end
 
+    record_look(context, latest_seq)
     names = Json.actor_names()
 
     {:ok,
@@ -182,6 +184,18 @@ defmodule ThinkBench.Mcp.Tools do
            Graph.create_region(Map.take(input.arguments, [:title, :x, :y, :w, :h]), actor: actor) do
       {:ok, %{seq: region.__metadata__.seq, region: Json.region(region)}}
     end
+  end
+
+  # Remembers the cursor a read handed the agent, so the board UI can show what changed
+  # since the AI last looked. Best effort: a failed record never fails the read.
+  defp record_look(context, seq) do
+    actor =
+      case context.actor do
+        %Actor{} = actor -> actor
+        _ -> with {:ok, actor} <- resolve_actor(nil), do: actor
+      end
+
+    Graph.record_agent_look(actor, seq)
   end
 
   defp actor(input, context) do

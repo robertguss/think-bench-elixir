@@ -170,6 +170,23 @@ defmodule ThinkBenchWeb.McpTest do
     end
   end
 
+  describe "the AI's last look" do
+    test "read_board and changes_since record the latest_seq they returned",
+         %{session: session} do
+      assert Graph.latest_look!() == nil
+
+      assert {:ok, %{"latest_seq" => seq}} = call(session, "read_board")
+      assert %{seq: ^seq, actor: %{name: "claude-code"}} = Graph.latest_look!()
+
+      assert {:ok, _} = call(session, "create_card", %{kind: "idea", title: "Unseen"})
+      assert Graph.latest_look!().seq == seq
+
+      assert {:ok, %{"latest_seq" => seq2}} = call(session, "changes_since", %{seq: seq})
+      assert seq2 == seq + 1
+      assert Graph.latest_look!().seq == seq2
+    end
+  end
+
   describe "writes" do
     test "create_card at a given position records one event as claude-code", %{session: session} do
       before = Graph.latest_seq()

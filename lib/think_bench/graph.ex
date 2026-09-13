@@ -15,6 +15,7 @@ defmodule ThinkBench.Graph do
 
   @pubsub ThinkBench.PubSub
   @topic "graph"
+  @looks_topic "graph:looks"
 
   resources do
     resource ThinkBench.Graph.Actor do
@@ -68,6 +69,11 @@ defmodule ThinkBench.Graph do
       define :set_selection, action: :set, args: [:session_id, :card_ids]
       define :get_selection, action: :current, get?: true, not_found_error?: false
     end
+
+    resource ThinkBench.Graph.Look do
+      define :record_look, action: :record, args: [:actor_id, :seq]
+      define :latest_look, action: :latest, get?: true, not_found_error?: false
+    end
   end
 
   @doc "The PubSub topic every graph event is broadcast on."
@@ -78,6 +84,25 @@ defmodule ThinkBench.Graph do
 
   @doc false
   def broadcast(%Event{} = event), do: Phoenix.PubSub.broadcast(@pubsub, @topic, {:event, event})
+
+  @doc """
+  Records that an agent looked at the board up to `seq` (the `latest_seq` a
+  `read_board` or `changes_since` returned) and broadcasts `{:look, %Look{}}` on the
+  `"graph:looks"` topic. Looks by human actors are not recorded.
+  """
+  def record_agent_look(%ThinkBench.Graph.Actor{kind: :agent} = actor, seq)
+      when is_integer(seq) do
+    with {:ok, look} <- record_look(actor.id, seq) do
+      look = %{look | actor: actor}
+      Phoenix.PubSub.broadcast(@pubsub, @looks_topic, {:look, look})
+      {:ok, look}
+    end
+  end
+
+  def record_agent_look(_actor, _seq), do: :ignored
+
+  @doc "Subscribes the calling process to `{:look, %Look{}}` messages."
+  def subscribe_looks, do: Phoenix.PubSub.subscribe(@pubsub, @looks_topic)
 
   @doc "The seq of the newest event, or 0 when the log is empty."
   def latest_seq do

@@ -11,6 +11,11 @@ defmodule ThinkBenchWeb.Endpoint do
     same_site: "Lax"
   ]
 
+  # The board UI's live connection (graph:main). See ThinkBenchWeb.UserSocket.
+  socket "/socket", ThinkBenchWeb.UserSocket,
+    websocket: true,
+    longpoll: false
+
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
