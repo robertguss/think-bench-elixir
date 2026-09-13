@@ -41,7 +41,6 @@ defmodule ThinkBench.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:req_llm, "~> 1.18"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:ash_ai, "~> 1.0"},
       {:ash_events, "~> 0.8"},

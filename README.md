@@ -28,6 +28,32 @@ mix phx.server              # or: iex -S mix phx.server
 
 Then open <http://localhost:4000>.
 
+## MCP server (Claude Code)
+
+The app serves an MCP server at <http://localhost:4000/mcp> (streamable HTTP, JSON
+responses) whenever `mix phx.server` is running, in dev and prod. Tools: `read_board`,
+`read_card`, `read_selection`, `changes_since`, `create_card`, `update_card`,
+`move_card`, `archive_card`, `link`, `unlink`, `create_region`.
+
+This repo ships a `.mcp.json`, so Claude Code started in the repo root offers the
+`think-bench` server automatically (approve it once when asked). To add it by hand, or
+for use from other directories:
+
+```sh
+claude mcp add --transport http think-bench http://localhost:4000/mcp            # this project only
+claude mcp add --transport http --scope user think-bench http://localhost:4000/mcp  # every project
+claude mcp list                                                                   # check it connects
+```
+
+**Actor.** Writes over MCP are recorded as `claude-code`. To write as another seeded
+actor, send an `X-Actor` header (e.g. add `"headers": {"X-Actor": "robert"}` to the
+server entry) or pass `actor` to a write tool. Unknown names are rejected.
+
+**No authentication.** The endpoint accepts any request that reaches it. Think Bench is
+a localhost tool: dev binds to 127.0.0.1, and browser requests from non-localhost
+origins are refused by ash_ai's Origin check. Do not expose port 4000 (or a prod
+deployment) to a network you do not trust without adding auth in front of `/mcp`.
+
 ## Checks
 
 ```sh

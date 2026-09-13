@@ -14,6 +14,22 @@ defmodule ThinkBenchWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :mcp do
+    plug ThinkBenchWeb.Plugs.McpActor
+  end
+
+  # MCP server (streamable HTTP) for Claude Code and other MCP clients. No
+  # authentication: Think Bench is a localhost tool. See README.
+  scope "/" do
+    pipe_through :mcp
+
+    forward "/mcp", AshAi.Mcp.Router,
+      tools: ThinkBench.Mcp.tool_names(),
+      otp_app: :think_bench,
+      mcp_name: "Think Bench",
+      instructions: ThinkBench.Mcp.instructions()
+  end
+
   scope "/", ThinkBenchWeb do
     pipe_through :browser
 

@@ -55,7 +55,7 @@ config :spark,
 
 config :think_bench,
   ecto_repos: [ThinkBench.Repo],
-  ash_domains: [ThinkBench.Graph],
+  ash_domains: [ThinkBench.Graph, ThinkBench.Mcp],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # Configure the endpoint
