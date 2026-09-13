@@ -28,6 +28,57 @@ mix phx.server              # or: iex -S mix phx.server
 
 Then open <http://localhost:4000>.
 
+## Using it
+
+1. **Start the server.** `docker compose up -d --wait`, then `mix phx.server`.
+2. **Open the board** at <http://localhost:4000>. Map is the default view; Focus and
+   Outline are the other tabs. Keep it beside your terminal.
+3. **Open Claude Code in the repo root** (`claude`). `CLAUDE.md` points it at the
+   `think-bench` skill (`skills/think-bench/SKILL.md`, linked into
+   `.claude/skills/`) and at the MCP server in `.mcp.json`.
+4. **Approve the MCP server.** The first time, Claude Code asks whether to trust the
+   project's `think-bench` server; approve it. `/mcp` shows whether it's connected.
+5. **Talk.** Claude reads the board first and summarises open questions, recent
+   decisions and pins. As you think out loud it writes ideas, questions, decisions,
+   sources and objections as cards, links each to what it came from, and resolves
+   questions once you decide. Select cards on the board and say "this one" to point
+   at them. Tell it "I changed the board" after moving or editing cards, and it catches
+   up with `changes_since`.
+
+### Optional: board-change hook
+
+`.claude/hooks/think-bench-changes.sh` runs before each prompt. It asks the board for
+events since the last prompt, and if someone other than `claude-code` changed
+something, it adds a short summary to the prompt, so you don't have to say "I changed
+the board". It's shipped disabled. To enable it for yourself, add this to
+`.claude/settings.local.json` (not committed), or to `.claude/settings.json` to share
+it:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/think-bench-changes.sh" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Notes on the hook:
+
+- **Needs `curl` and `jq`.** It prints nothing and never blocks a prompt if the server
+  is down.
+- **Where the cursor lives.** It keeps its cursor in
+  `$TMPDIR/think-bench-hook-cursor-<hash>`. The first prompt only records the current
+  head. Delete the file to reset.
+- **Env overrides:** `THINK_BENCH_MCP_URL`, `THINK_BENCH_HOOK_CURSOR`.
+- **It counts as a look.** It calls `changes_since` as `claude-code`, so the
+  inspector's "changes since the AI last looked" resets on each prompt.
+
 ## MCP server (Claude Code)
 
 The app serves an MCP server at <http://localhost:4000/mcp> (streamable HTTP, JSON
