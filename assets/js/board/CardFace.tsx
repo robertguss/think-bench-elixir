@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
-import type { Card } from "./types"
+import { CARD_WIDTH, type Card } from "./types"
 
-export const CARD_WIDTH = 220
+export { CARD_WIDTH }
 
 type Props = {
   card: Card

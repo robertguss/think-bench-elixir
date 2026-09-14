@@ -6,7 +6,7 @@ defmodule ThinkBenchWeb.Plugs.McpActor do
   """
   import Plug.Conn
 
-  alias ThinkBench.Mcp.Tools
+  alias ThinkBench.Board.Tools
 
   def init(opts), do: opts
 

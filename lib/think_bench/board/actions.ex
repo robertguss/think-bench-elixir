@@ -1,14 +1,14 @@
-defmodule ThinkBench.Mcp.Board do
+defmodule ThinkBench.Board.Actions do
   @moduledoc """
-  The board as the AI sees it: one generic action per MCP tool. Descriptions here are
-  what the model reads, so they say what to pass and what comes back.
-  Implementations live in `ThinkBench.Mcp.Tools`.
+  One generic action per board operation. Descriptions here are what the model reads.
+  Implementations live in `ThinkBench.Board.Tools`.
   """
-  use Ash.Resource, domain: ThinkBench.Mcp
+  use Ash.Resource, domain: ThinkBench.Board
 
-  alias ThinkBench.Mcp.Tools
+  alias ThinkBench.Board.Tools
+  alias ThinkBench.Graph.Vocabulary
 
-  @kinds [:idea, :question, :decision, :source, :objection]
+  @kinds Vocabulary.kinds()
   @actor_doc "Seeded actor to write as, e.g. robert. Omit to write as claude-code."
 
   actions do
@@ -180,6 +180,29 @@ defmodule ThinkBench.Mcp.Board do
       argument :h, :integer, allow_nil?: false, constraints: [min: 1], description: "Height."
       argument :actor, :string, description: @actor_doc
       run &Tools.create_region/2
+    end
+
+    action :update_region, :map do
+      description """
+      Change a region's title, position or size. Pass id and only the fields to change. \
+      Returns {seq, region}.
+      """
+
+      argument :id, :uuid, allow_nil?: false, description: "The region id."
+      argument :title, :string
+      argument :x, :integer, description: "Left edge."
+      argument :y, :integer, description: "Top edge."
+      argument :w, :integer, constraints: [min: 1], description: "Width."
+      argument :h, :integer, constraints: [min: 1], description: "Height."
+      argument :actor, :string, description: @actor_doc
+      run &Tools.update_region/2
+    end
+
+    action :destroy_region, :map do
+      description "Remove a region from the map. Pass id. Returns {seq, region} for the removed region."
+      argument :id, :uuid, allow_nil?: false, description: "The region id."
+      argument :actor, :string, description: @actor_doc
+      run &Tools.destroy_region/2
     end
   end
 end

@@ -101,9 +101,11 @@ actor, send an `X-Actor` header (e.g. add `"headers": {"X-Actor": "robert"}` to 
 server entry) or pass `actor` to a write tool. Unknown names are rejected.
 
 **No authentication.** The endpoint accepts any request that reaches it. Think Bench is
-a localhost tool: dev binds to 127.0.0.1, and browser requests from non-localhost
-origins are refused by ash_ai's Origin check. Do not expose port 4000 (or a prod
-deployment) to a network you do not trust without adding auth in front of `/mcp`.
+a localhost tool: dev binds to 127.0.0.1. Browser requests from other origins are
+refused for both `/mcp` (ash_ai Origin check) and `/socket` (`check_origin` on the
+endpoint). Do not expose port 4000 to a network you do not trust without adding auth
+in front of `/mcp` and `/socket`. A production bind past loopback requires
+`PHX_BIND_ALL=true`.
 
 ## Checks
 

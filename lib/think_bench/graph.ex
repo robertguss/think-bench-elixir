@@ -10,6 +10,7 @@ defmodule ThinkBench.Graph do
   `record.__metadata__.event` and `record.__metadata__.seq`.
   """
   use Ash.Domain, otp_app: :think_bench
+  require Ash.Query
 
   alias ThinkBench.Graph.Event
 
@@ -36,6 +37,7 @@ defmodule ThinkBench.Graph do
     resource ThinkBench.Graph.Link do
       define :list_links, action: :read
       define :get_link, action: :read, get_by: [:id]
+      define :list_links_among, action: :among, args: [:card_ids]
 
       define :find_link,
         action: :by_endpoints,
@@ -52,6 +54,7 @@ defmodule ThinkBench.Graph do
 
     resource ThinkBench.Graph.Region do
       define :list_regions, action: :read
+      define :get_region, action: :read, get_by: [:id]
       define :create_region, action: :create
       define :update_region, action: :update
 
@@ -72,6 +75,7 @@ defmodule ThinkBench.Graph do
 
     resource ThinkBench.Graph.Look do
       define :record_look, action: :record, args: [:actor_id, :seq]
+      define :get_look, action: :read, get_by: [:actor_id], not_found_error?: false
       define :latest_look, action: :latest, get?: true, not_found_error?: false
     end
   end
@@ -104,12 +108,65 @@ defmodule ThinkBench.Graph do
   @doc "Subscribes the calling process to `{:look, %Look{}}` messages."
   def subscribe_looks, do: Phoenix.PubSub.subscribe(@pubsub, @looks_topic)
 
+  @changes_limit 500
+  @recent_limit 200
+
   @doc "The seq of the newest event, or 0 when the log is empty."
   def latest_seq do
     case latest_event!() do
       nil -> 0
       event -> event.seq
     end
+  end
+
+  @doc """
+  Events after `seq`, oldest first, plus `has_more` and a cursor that never runs
+  ahead of the returned events. Default page is #{@changes_limit}.
+  """
+  def page_changes(seq, opts \\ []) when is_integer(seq) do
+    limit = Keyword.get(opts, :limit, @changes_limit)
+    head = latest_seq()
+
+    events =
+      Event
+      |> Ash.Query.for_read(:since, %{seq: seq})
+      |> Ash.Query.limit(limit + 1)
+      |> Ash.read!()
+
+    {events, has_more} =
+      if length(events) > limit,
+        do: {Enum.take(events, limit), true},
+        else: {events, false}
+
+    latest_seq =
+      case List.last(events) do
+        nil -> head
+        last when has_more -> last.seq
+        last -> Kernel.max(head, last.seq)
+      end
+
+    %{events: events, has_more: has_more, latest_seq: latest_seq}
+  end
+
+  @doc "The newest `limit` events, oldest first (for the inspector on join)."
+  def recent_events(limit \\ @recent_limit) do
+    Event
+    |> Ash.Query.for_read(:recent)
+    |> Ash.Query.limit(limit)
+    |> Ash.read!()
+    |> Enum.reverse()
+  end
+
+  @doc "Cards in `ids` order, including archived. Missing ids are dropped."
+  def cards_in_order(ids) when is_list(ids) do
+    by_id =
+      ThinkBench.Graph.Card
+      |> Ash.Query.for_read(:board, %{include_archived: true})
+      |> Ash.Query.filter(id in ^ids)
+      |> Ash.read!()
+      |> Map.new(&{&1.id, &1})
+
+    for id <- ids, card = by_id[id], do: card
   end
 
   @doc """
@@ -129,12 +186,7 @@ defmodule ThinkBench.Graph do
       |> Map.new()
 
     cards = list_cards!(card_input)
-    card_ids = MapSet.new(cards, & &1.id)
-
-    links =
-      Enum.filter(list_links!(), fn link ->
-        MapSet.member?(card_ids, link.from_card_id) and MapSet.member?(card_ids, link.to_card_id)
-      end)
+    links = list_links_among!(Enum.map(cards, & &1.id))
 
     %{cards: cards, links: links, regions: list_regions!(), latest_seq: latest_seq}
   end

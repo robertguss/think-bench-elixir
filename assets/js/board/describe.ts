@@ -18,38 +18,80 @@ function titleOf(titles: Record<string, string>, id: unknown) {
   return t ? `“${t}”` : "a card"
 }
 
-/** A sentence for the change feed: "created idea “X”", "moved “X”". */
-export function describeEvent(e: GraphEvent, titles: Record<string, string>) {
+function describeCard(e: GraphEvent, titles: Record<string, string>) {
   const c = e.changes
   const card = titleOf(titles, e.record_id)
 
-  if (e.resource === "card") {
-    switch (e.action) {
-      case "create":
-        return `created ${str(c.kind) ?? "card"} ${card}`
-      case "move":
-        return `moved ${card}`
-      case "archive":
-        return `archived ${card}`
-      case "update": {
-        const fields = Object.keys(c).filter((k) => ["title", "body", "tags", "status", "pinned"].includes(k))
-        if (fields.length === 1 && fields[0] === "status") return `marked ${card} ${str(c.status)}`
-        if (fields.length === 1 && fields[0] === "pinned") return `${c.pinned ? "pinned" : "unpinned"} ${card}`
-        return `edited ${card}${fields.length ? ` (${fields.join(", ")})` : ""}`
-      }
+  switch (e.action) {
+    case "create":
+      return `created ${str(c.kind) ?? "card"} ${card}`
+    case "move":
+      return `moved ${card}`
+    case "archive":
+      return `archived ${card}`
+    case "update": {
+      const fields = Object.keys(c).filter((k) => ["title", "body", "tags", "status", "pinned"].includes(k))
+      if (fields.length === 1 && fields[0] === "status") return `marked ${card} ${str(c.status)}`
+      if (fields.length === 1 && fields[0] === "pinned") return `${c.pinned ? "pinned" : "unpinned"} ${card}`
+      return `edited ${card}${fields.length ? ` (${fields.join(", ")})` : ""}`
+    }
+    default:
+      return `${e.action} ${card}`
+  }
+}
+
+function describeLink(e: GraphEvent, titles: Record<string, string>) {
+  const c = e.changes
+  if (e.action === "create")
+    return `linked ${titleOf(titles, c.from_card_id)} ${str(c.type)} ${titleOf(titles, c.to_card_id)}`
+  if (e.action === "destroy") return "removed a link"
+  return `${e.action} a link`
+}
+
+function describeRegion(e: GraphEvent) {
+  const c = e.changes
+  if (e.action === "create") return `drew region “${str(c.title)}”`
+  if (e.action === "destroy") return "removed a region"
+  if (e.action === "update") return `changed region “${str(c.title) ?? "untitled"}”`
+  return `${e.action} a region`
+}
+
+/** A sentence for the change feed: "created idea “X”", "moved “X”". */
+export function describeEvent(e: GraphEvent, titles: Record<string, string>) {
+  switch (e.resource) {
+    case "card":
+      return describeCard(e, titles)
+    case "link":
+      return describeLink(e, titles)
+    case "region":
+      return describeRegion(e)
+    default: {
+      const _exhaustive: never = e.resource
+      return `${e.action} ${_exhaustive}`
     }
   }
-  if (e.resource === "link") {
-    if (e.action === "create")
-      return `linked ${titleOf(titles, c.from_card_id)} ${str(c.type)} ${titleOf(titles, c.to_card_id)}`
-    if (e.action === "destroy") return "removed a link"
+}
+
+function toolCard(e: GraphEvent, titles: Record<string, string>): [string, string] {
+  const c = e.changes
+  const t = (id: unknown) => (typeof id === "string" ? (titles[id] ?? id.slice(0, 8)) : "?")
+
+  switch (e.action) {
+    case "create":
+      return ["create_card", `${str(c.kind)}: ${t(e.record_id)}`]
+    case "move":
+      return ["move_card", `${t(e.record_id)} → ${c.x}, ${c.y}`]
+    case "archive":
+      return ["archive_card", t(e.record_id)]
+    case "update": {
+      const fields = Object.keys(c)
+        .filter((k) => ["title", "body", "tags", "status", "pinned"].includes(k))
+        .map((k) => (k === "status" ? `status=${str(c.status)}` : k === "pinned" ? `pinned=${c.pinned}` : k))
+      return ["update_card", `${t(e.record_id)}: ${fields.join(", ")}`]
+    }
+    default:
+      return [`card.${e.action}`, t(e.record_id)]
   }
-  if (e.resource === "region") {
-    if (e.action === "create") return `drew region “${str(c.title)}”`
-    if (e.action === "destroy") return "removed a region"
-    return "changed a region"
-  }
-  return `${e.action} ${e.resource}`
 }
 
 /** The MCP tool an agent's event came from, with a short argument summary. */
@@ -57,28 +99,23 @@ export function describeTool(e: GraphEvent, titles: Record<string, string>): [st
   const c = e.changes
   const t = (id: unknown) => (typeof id === "string" ? (titles[id] ?? id.slice(0, 8)) : "?")
 
-  if (e.resource === "card") {
-    switch (e.action) {
-      case "create":
-        return ["create_card", `${str(c.kind)}: ${t(e.record_id)}`]
-      case "move":
-        return ["move_card", `${t(e.record_id)} → ${c.x}, ${c.y}`]
-      case "archive":
-        return ["archive_card", t(e.record_id)]
-      case "update": {
-        const fields = Object.keys(c)
-          .filter((k) => ["title", "body", "tags", "status", "pinned"].includes(k))
-          .map((k) => (k === "status" ? `status=${str(c.status)}` : k === "pinned" ? `pinned=${c.pinned}` : k))
-        return ["update_card", `${t(e.record_id)}: ${fields.join(", ")}`]
-      }
+  switch (e.resource) {
+    case "card":
+      return toolCard(e, titles)
+    case "link":
+      if (e.action === "create") return ["link", `${str(c.type)}: ${t(c.from_card_id)} → ${t(c.to_card_id)}`]
+      if (e.action === "destroy") return ["unlink", e.record_id.slice(0, 8)]
+      return [`link.${e.action}`, ""]
+    case "region":
+      if (e.action === "create") return ["create_region", str(c.title) ?? ""]
+      if (e.action === "update") return ["update_region", str(c.title) ?? e.record_id.slice(0, 8)]
+      if (e.action === "destroy") return ["destroy_region", str(c.title) ?? e.record_id.slice(0, 8)]
+      return [`region.${e.action}`, ""]
+    default: {
+      const _exhaustive: never = e.resource
+      return [`${_exhaustive}.${e.action}`, ""]
     }
   }
-  if (e.resource === "link") {
-    if (e.action === "create") return ["link", `${str(c.type)}: ${t(c.from_card_id)} → ${t(c.to_card_id)}`]
-    if (e.action === "destroy") return ["unlink", e.record_id.slice(0, 8)]
-  }
-  if (e.resource === "region" && e.action === "create") return ["create_region", str(c.title) ?? ""]
-  return [`${e.resource}.${e.action}`, ""]
 }
 
 export function timeAgo(iso: string, now = Date.now()) {

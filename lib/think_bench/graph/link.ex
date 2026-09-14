@@ -13,9 +13,9 @@ defmodule ThinkBench.Graph.Link do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events]
 
-  alias ThinkBench.Graph.Changes
+  alias ThinkBench.Graph.{Changes, Vocabulary}
 
-  @hierarchy_types ~w(answers resolves raised-by follows-from depends-on challenges)
+  @hierarchy_types Vocabulary.hierarchy_types()
 
   postgres do
     table "links"
@@ -35,6 +35,12 @@ defmodule ThinkBench.Graph.Link do
 
   actions do
     defaults [:read]
+
+    read :among do
+      argument :card_ids, {:array, :uuid}, allow_nil?: false
+
+      filter expr(from_card_id in ^arg(:card_ids) and to_card_id in ^arg(:card_ids))
+    end
 
     read :by_endpoints do
       argument :from_card_id, :uuid, allow_nil?: false

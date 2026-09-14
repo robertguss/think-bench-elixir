@@ -6,29 +6,29 @@ defmodule ThinkBenchWeb.GraphChannel do
   and the AI's last look. Afterwards every graph event is pushed as `"event"` with the
   current state of the record it touched, and every agent look as `"look"`.
 
-  Inbound writes (`move_card`, `create_card`, `update_card`, `link`, `create_region`)
-  run the same generic actions the MCP tools do (`ThinkBench.Mcp.Board`), acting as
-  `robert`. `select` stores the selection for this socket's session, which the MCP
-  `read_selection` tool returns.
+  Inbound writes run the same generic actions the MCP tools do (`ThinkBench.Board.Actions`),
+  acting as `robert`. `select` stores the selection for this socket's session, which the
+  MCP `read_selection` tool returns.
   """
   use ThinkBenchWeb, :channel
 
+  alias ThinkBench.Board.{Actions, Json}
   alias ThinkBench.Graph
   alias ThinkBench.Graph.{Card, Event, Link, Region}
-  alias ThinkBench.Mcp.{Board, Json}
 
-  @recent_events 200
-  @writes ~w(move_card create_card update_card link create_region)
+  @writes ~w(move_card create_card update_card link unlink archive_card create_region update_region destroy_region)
 
   @impl true
   def join("graph:main", _payload, socket) do
-    # Subscribe before reading so nothing committed in between is missed; the pushed
-    # record snapshots are idempotent, so a duplicate is harmless.
     Graph.subscribe()
     Graph.subscribe_looks()
 
     with {:ok, robert} <- robert() do
-      {:ok, board_payload(socket), assign(socket, :robert, robert)}
+      actors = Graph.list_actors!()
+      names = Json.actor_names(actors)
+
+      {:ok, board_payload(socket, actors, names),
+       assign(socket, robert: robert, actor_names: names)}
     end
   end
 
@@ -44,7 +44,7 @@ defmodule ThinkBenchWeb.GraphChannel do
     params = Map.delete(params, "actor")
 
     result =
-      Board
+      Actions
       |> Ash.ActionInput.for_action(String.to_existing_atom(action), params,
         actor: socket.assigns.robert
       )
@@ -62,7 +62,7 @@ defmodule ThinkBenchWeb.GraphChannel do
 
   @impl true
   def handle_info({:event, %Event{} = event}, socket) do
-    names = Json.actor_names()
+    {names, socket} = names_for(socket, event.actor_id)
     push(socket, "event", Map.merge(%{event: Json.event(event, names)}, record(event, names)))
     {:noreply, socket}
   end
@@ -79,16 +79,8 @@ defmodule ThinkBenchWeb.GraphChannel do
     end
   end
 
-  defp board_payload(socket) do
+  defp board_payload(socket, actors, names) do
     board = Graph.read_board()
-    names = Json.actor_names()
-
-    events =
-      Event
-      |> Ash.Query.sort(id: :desc)
-      |> Ash.Query.limit(@recent_events)
-      |> Ash.read!()
-      |> Enum.reverse()
 
     %{
       session_id: socket.assigns.session_id,
@@ -96,30 +88,39 @@ defmodule ThinkBenchWeb.GraphChannel do
       cards: Enum.map(board.cards, &Json.card(&1, names)),
       links: Enum.map(board.links, &Json.link/1),
       regions: Enum.map(board.regions, &Json.region/1),
-      events: Enum.map(events, &Json.event(&1, names)),
-      actors: Enum.map(Graph.list_actors!(), &%{name: &1.name, kind: &1.kind}),
+      events: Enum.map(Graph.recent_events(), &Json.event(&1, names)),
+      actors: Enum.map(actors, &%{name: &1.name, kind: &1.kind}),
       look: look_json(Graph.latest_look!())
     }
   end
 
-  # The current state of the record an event touched, so the UI applies a snapshot
-  # rather than replaying event payloads. A record that no longer exists is `removed`.
+  defp names_for(socket, actor_id) do
+    names = socket.assigns.actor_names
+
+    if is_nil(actor_id) or Map.has_key?(names, actor_id) do
+      {names, socket}
+    else
+      names = Json.actor_names()
+      {names, assign(socket, :actor_names, names)}
+    end
+  end
+
   defp record(%Event{resource: Card, record_id: id}, names) do
-    case Ash.get(Card, id) do
+    case Graph.get_card(id) do
       {:ok, card} -> %{card: Json.card(card, names)}
       _ -> %{removed: %{resource: "card", id: id}}
     end
   end
 
   defp record(%Event{resource: Link, record_id: id}, _names) do
-    case Ash.get(Link, id) do
+    case Graph.get_link(id) do
       {:ok, link} -> %{link: Json.link(link)}
       _ -> %{removed: %{resource: "link", id: id}}
     end
   end
 
   defp record(%Event{resource: Region, record_id: id}, _names) do
-    case Ash.get(Region, id) do
+    case Graph.get_region(id) do
       {:ok, region} -> %{region: Json.region(region)}
       _ -> %{removed: %{resource: "region", id: id}}
     end

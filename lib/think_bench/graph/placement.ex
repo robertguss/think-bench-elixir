@@ -9,9 +9,10 @@ defmodule ThinkBench.Graph.Placement do
   win over left and above.
   """
   alias ThinkBench.Graph
+  alias ThinkBench.Graph.Vocabulary
 
-  @card_w 220
-  @card_h 120
+  @card_w Vocabulary.card_width()
+  @card_h Vocabulary.card_height()
   @step_x @card_w + 20
   @step_y @card_h + 20
   @origin {80, 80}

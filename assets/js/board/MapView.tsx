@@ -13,7 +13,6 @@ import {
   useReactFlow,
   type Edge,
   type EdgeProps,
-  type InternalNode,
   type Node,
   type NodeChange,
   type NodeProps,
@@ -23,9 +22,10 @@ import {
 } from "@xyflow/react"
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react"
 import { BoardHead } from "./BoardHead"
-import { CARD_WIDTH, CardFace } from "./CardFace"
+import { CardFace } from "./CardFace"
+import { box, edgePoint } from "./mapGeometry"
 import { NewCardForm } from "./NewCardForm"
-import type { Card, Move, Region } from "./types"
+import { CARD_WIDTH, type Card, type Move, type Region } from "./types"
 import type { BoardActions, BoardState } from "./useBoard"
 
 type CardNode = Node<{ card: Card; entering: boolean }, "card">
@@ -54,22 +54,6 @@ function RegionNodeView({ data }: NodeProps<RegionNode>) {
 }
 
 const nodeTypes = { card: CardNodeView, region: RegionNodeView }
-
-// ---- edges: floating, box edge to box edge, as in the prototype -------------
-
-function box(node: InternalNode) {
-  const w = node.measured.width ?? CARD_WIDTH
-  const h = node.measured.height ?? 90
-  return { cx: node.internals.positionAbsolute.x + w / 2, cy: node.internals.positionAbsolute.y + h / 2, w, h }
-}
-
-// The point on a's border along the line toward b's centre.
-function edgePoint(a: ReturnType<typeof box>, b: ReturnType<typeof box>) {
-  const dx = b.cx - a.cx
-  const dy = b.cy - a.cy
-  const s = Math.min(a.w / 2 / Math.abs(dx || 1e-6), a.h / 2 / Math.abs(dy || 1e-6))
-  return { x: a.cx + dx * s, y: a.cy + dy * s }
-}
 
 function TypedEdgeView({ id, source, target, data }: EdgeProps<TypedEdge>) {
   const sourceNode = useInternalNode(source)
@@ -118,7 +102,7 @@ function buildNodes(prev: MapNode[], board: BoardState, selected: Set<string>): 
       type: "region",
       position: { x: region.x, y: region.y },
       data: { region },
-      draggable: false,
+      draggable: true,
       selectable: false,
       focusable: false,
       zIndex: -1,
@@ -233,6 +217,16 @@ export function MapView({ board, actions, selectedIds, onSelect, onError, tabs, 
       const moves: Move[] = []
       const undo: Move[] = []
       for (const n of dragged) {
+        if (n.type === "region") {
+          const id = n.id.replace(/^region:/, "")
+          const region = board.regions[id]
+          if (!region) continue
+          const x = Math.round(n.position.x)
+          const y = Math.round(n.position.y)
+          if (x === region.x && y === region.y) continue
+          actions.call("update_region", { id, x, y }).catch((e: Error) => onError(`Region move failed: ${e.message}`))
+          continue
+        }
         const card = n.type === "card" ? board.cards[n.id] : undefined
         if (!card) continue
         const x = Math.round(n.position.x)
@@ -251,7 +245,7 @@ export function MapView({ board, actions, selectedIds, onSelect, onError, tabs, 
         }),
       )
     },
-    [board.cards, actions, onError],
+    [board.cards, board.regions, actions, onError],
   )
 
   const openDraftAt = (clientX: number, clientY: number) => {

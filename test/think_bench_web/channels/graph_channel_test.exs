@@ -3,7 +3,7 @@ defmodule ThinkBenchWeb.GraphChannelTest do
   use ThinkBenchWeb.ChannelCase, async: false
 
   alias ThinkBench.Graph
-  alias ThinkBench.Mcp.Tools
+  alias ThinkBench.Board.Tools
   alias ThinkBenchWeb.UserSocket
 
   setup do
@@ -161,13 +161,34 @@ defmodule ThinkBenchWeb.GraphChannelTest do
       assert {from, to} == {question.id, idea.id}
     end
 
-    test "create_region", %{socket: socket, robert: robert} do
+    test "create_region, update_region and destroy_region", %{socket: socket, robert: robert} do
       params = %{"title" => "Capture", "x" => 0, "y" => 500, "w" => 480, "h" => 300}
       ref = push(socket, "create_region", params)
-      assert_reply ref, :ok, %{seq: seq, region: %{title: "Capture"}}
+      assert_reply ref, :ok, %{seq: seq, region: %{id: id, title: "Capture"}}
       assert last_event_by(robert).seq == seq
 
       assert_push "event", %{event: %{seq: ^seq, resource: "region"}, region: %{w: 480}}
+
+      ref = push(socket, "update_region", %{"id" => id, "title" => "Renamed"})
+      assert_reply ref, :ok, %{region: %{title: "Renamed"}}
+      assert_push "event", %{region: %{id: ^id, title: "Renamed"}}
+
+      ref = push(socket, "destroy_region", %{"id" => id})
+      assert_reply ref, :ok, %{region: %{id: ^id}}
+      assert_push "event", %{removed: %{resource: "region", id: ^id}}
+    end
+
+    test "archive_card and unlink", %{socket: socket, robert: robert, idea: idea, link: link} do
+      ref = push(socket, "unlink", %{"id" => link.id})
+      assert_reply ref, :ok, %{link: %{id: id}}
+      assert id == link.id
+      assert last_event_by(robert).action == :destroy
+      assert_push "event", %{removed: %{resource: "link", id: ^id}}
+
+      ref = push(socket, "archive_card", %{"id" => idea.id})
+      assert_reply ref, :ok, %{card: %{archived: true}}
+      assert last_event_by(robert).action == :archive
+      assert_push "event", %{card: %{archived: true}}
     end
 
     test "invalid input replies with an error and writes nothing", %{socket: socket} do

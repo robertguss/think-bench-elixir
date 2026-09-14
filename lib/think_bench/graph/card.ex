@@ -7,7 +7,7 @@ defmodule ThinkBench.Graph.Card do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshEvents.Events]
 
-  alias ThinkBench.Graph.Changes
+  alias ThinkBench.Graph.{Changes, Vocabulary}
 
   postgres do
     table "cards"
@@ -25,7 +25,7 @@ defmodule ThinkBench.Graph.Card do
 
     read :board do
       argument :kinds, {:array, :atom} do
-        constraints items: [one_of: [:idea, :question, :decision, :source, :objection]]
+        constraints items: [one_of: Vocabulary.kinds()]
       end
 
       argument :tags, {:array, :string}
@@ -43,6 +43,7 @@ defmodule ThinkBench.Graph.Card do
 
     create :create do
       accept [:kind, :title, :body, :tags, :x, :y]
+      change Changes.PlaceCard
       change Changes.SetCreatedBy
     end
 
@@ -81,7 +82,7 @@ defmodule ThinkBench.Graph.Card do
     attribute :kind, :atom do
       allow_nil? false
       public? true
-      constraints one_of: [:idea, :question, :decision, :source, :objection]
+      constraints one_of: Vocabulary.kinds()
     end
 
     attribute :title, :string do
@@ -116,13 +117,11 @@ defmodule ThinkBench.Graph.Card do
     attribute :x, :integer do
       allow_nil? false
       public? true
-      default 0
     end
 
     attribute :y, :integer do
       allow_nil? false
       public? true
-      default 0
     end
 
     attribute :archived_at, :utc_datetime_usec do

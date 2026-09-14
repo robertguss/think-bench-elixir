@@ -1,18 +1,9 @@
 // Pure graph logic for the Focus and Outline views. No React, no DOM: unit tested in
 // graph.test.ts.
 
-import type { Card, Kind, Link } from "./types"
+import { HIERARCHY_TYPES, type Card, type Kind, type Link } from "./types"
 
-// Must match @hierarchy_types in ThinkBench.Graph.Link. A hierarchical link from A to
-// B means B is A's parent; `cites` and unknown types are jumps.
-export const HIERARCHY_TYPES: ReadonlySet<string> = new Set([
-  "answers",
-  "resolves",
-  "raised-by",
-  "follows-from",
-  "depends-on",
-  "challenges",
-])
+export { HIERARCHY_TYPES }
 
 export type Grammar = "hierarchy" | "jump"
 

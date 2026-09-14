@@ -26,6 +26,7 @@ defmodule ThinkBench.Graph.Look do
       upsert? true
       upsert_identity :unique_actor
       upsert_fields [:seq, :updated_at]
+      change ThinkBench.Graph.Changes.MonotonicSeq
     end
 
     read :latest do

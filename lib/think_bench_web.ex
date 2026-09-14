@@ -84,8 +84,6 @@ defmodule ThinkBenchWeb do
 
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components
-      import ThinkBenchWeb.CoreComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

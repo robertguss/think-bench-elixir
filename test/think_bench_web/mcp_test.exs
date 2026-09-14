@@ -84,7 +84,7 @@ defmodule ThinkBenchWeb.McpTest do
       %{"result" => %{"tools" => tools}} = rpc(session, "tools/list", %{})
 
       assert Enum.map(tools, & &1["name"]) |> Enum.sort() ==
-               ~w(archive_card changes_since create_card create_region link move_card read_board read_card read_selection unlink update_card)
+               ~w(archive_card changes_since create_card create_region destroy_region link move_card read_board read_card read_selection unlink update_card update_region)
 
       by_name = Map.new(tools, &{&1["name"], &1})
       assert by_name["read_board"]["description"] =~ "Remember latest_seq"
@@ -313,12 +313,21 @@ defmodule ThinkBenchWeb.McpTest do
       assert message =~ "link id"
     end
 
-    test "create_region", %{session: session} do
+    test "create_region, update_region and destroy_region", %{session: session} do
       assert {:ok, %{"seq" => seq, "region" => region}} =
                call(session, "create_region", %{title: "Capture", x: 0, y: 600, w: 500, h: 300})
 
       assert %{"title" => "Capture", "w" => 500, "h" => 300} = region
       assert [%{resource: Graph.Region}] = Graph.changes_since!(seq - 1)
+
+      assert {:ok, %{"region" => %{"title" => "Renamed", "x" => 10}}} =
+               call(session, "update_region", %{id: region["id"], title: "Renamed", x: 10})
+
+      assert {:ok, %{"region" => %{"id" => id}}} =
+               call(session, "destroy_region", %{id: region["id"]})
+
+      assert id == region["id"]
+      refute Enum.any?(Graph.list_regions!(), &(&1.id == id))
     end
   end
 

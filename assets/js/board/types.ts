@@ -1,4 +1,5 @@
-// Shapes sent by ThinkBenchWeb.GraphChannel (see ThinkBench.Mcp.Json).
+// Shapes sent by ThinkBenchWeb.GraphChannel (see ThinkBench.Board.Json).
+// KINDS, LINK_TYPES, CARD_* must match ThinkBench.Graph.Vocabulary.
 
 export const KINDS = ["idea", "question", "decision", "source", "objection"] as const
 export type Kind = (typeof KINDS)[number]
@@ -12,6 +13,18 @@ export const LINK_TYPES = [
   "challenges",
   "cites",
 ] as const
+
+export const HIERARCHY_TYPES: ReadonlySet<string> = new Set([
+  "answers",
+  "resolves",
+  "raised-by",
+  "follows-from",
+  "depends-on",
+  "challenges",
+])
+
+export const CARD_WIDTH = 220
+export const CARD_HEIGHT = 120
 
 export type Card = {
   id: string

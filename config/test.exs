@@ -21,12 +21,6 @@ config :think_bench, ThinkBenchWeb.Endpoint,
   secret_key_base: "8N7yNPniAjFUgCjvXE6jtBaSDFOdiT+zQX5COMZEQRuc3AoDRyJziA7KdmbXRuwK",
   server: false
 
-# In test we don't send emails
-config :think_bench, ThinkBench.Mailer, adapter: Swoosh.Adapters.Test
-
-# Disable swoosh api client as it is only required for production adapters
-config :swoosh, :api_client, false
-
 # Print only warnings and errors during test
 config :logger, level: :warning
 

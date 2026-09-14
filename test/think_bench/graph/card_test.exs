@@ -40,6 +40,14 @@ defmodule ThinkBench.Graph.CardTest do
 
       assert Graph.list_cards!() == []
     end
+
+    test "omitting x and y places the card in a free spot", %{robert: robert} do
+      first = Graph.create_card!(%{kind: :idea, title: "first"}, actor: robert)
+      second = Graph.create_card!(%{kind: :idea, title: "second"}, actor: robert)
+
+      assert is_integer(first.x) and is_integer(first.y)
+      assert {first.x, first.y} != {second.x, second.y}
+    end
   end
 
   test "update_card changes title, body, tags and status", %{robert: robert} do

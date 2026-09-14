@@ -1,13 +1,14 @@
-defmodule ThinkBench.Mcp.Json do
+defmodule ThinkBench.Board.Json do
   @moduledoc """
-  Compact, model-friendly shapes for graph records in MCP tool results. Actors appear
-  by name; timestamps and internal ids are left out unless they help the model.
+  Compact shapes for graph records on the channel and in MCP tool results. Actors
+  appear by name; timestamps and internal ids are left out unless they help.
   """
 
-  @doc "A map of actor id to actor name, for naming creators and event actors."
-  def actor_names do
-    Map.new(ThinkBench.Graph.list_actors!(), &{&1.id, &1.name})
-  end
+  @doc "A map of actor id to actor name. Pass a cached list to avoid a scan."
+  def actor_names(actors \\ nil)
+  def actor_names(nil), do: actor_names(ThinkBench.Graph.list_actors!())
+  def actor_names(actors) when is_list(actors), do: Map.new(actors, &{&1.id, &1.name})
+  def actor_names(names) when is_map(names), do: names
 
   def card(card, names) do
     %{

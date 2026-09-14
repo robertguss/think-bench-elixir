@@ -55,7 +55,7 @@ config :spark,
 
 config :think_bench,
   ecto_repos: [ThinkBench.Repo],
-  ash_domains: [ThinkBench.Graph, ThinkBench.Mcp],
+  ash_domains: [ThinkBench.Graph, ThinkBench.Board],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
 
 # Configure the endpoint
@@ -68,15 +68,6 @@ config :think_bench, ThinkBenchWeb.Endpoint,
   ],
   pubsub_server: ThinkBench.PubSub,
   live_view: [signing_salt: "pO2uzvoN"]
-
-# Configure the mailer
-#
-# By default it uses the "Local" adapter which stores the emails
-# locally. You can see the emails in your browser, at "/dev/mailbox".
-#
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
-config :think_bench, ThinkBench.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,

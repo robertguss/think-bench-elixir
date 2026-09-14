@@ -1,21 +1,18 @@
-defmodule ThinkBench.Mcp.Tools do
+defmodule ThinkBench.Board.Tools do
   @moduledoc """
-  Implementations behind the MCP tools declared on `ThinkBench.Mcp.Board`. Each tool
-  goes through the `ThinkBench.Graph` domain and performs at most one write, so each
-  write is its own transaction and its broadcast follows its own commit.
+  Implementations behind `ThinkBench.Board.Actions`. Each write goes through
+  `ThinkBench.Graph` and is its own transaction.
 
   The acting actor is, in order: the tool's `actor` argument, the actor the request
   resolved from its `X-Actor` header (`ThinkBenchWeb.Plugs.McpActor`), `claude-code`.
   """
-  require Ash.Query
 
   alias Ash.Error.Action.InvalidArgument
+  alias ThinkBench.Board.Json
   alias ThinkBench.Graph
-  alias ThinkBench.Graph.{Actor, Card, Event, Link, Placement}
-  alias ThinkBench.Mcp.Json
+  alias ThinkBench.Graph.Actor
 
   @default_actor "claude-code"
-  @changes_limit 500
 
   @doc "The default MCP actor name."
   def default_actor_name, do: @default_actor
@@ -37,8 +34,6 @@ defmodule ThinkBench.Mcp.Tools do
         {:error, "no actor named #{inspect(name)}; known actors: #{known}"}
     end
   end
-
-  # Reads
 
   def read_board(input, context) do
     opts =
@@ -74,55 +69,24 @@ defmodule ThinkBench.Mcp.Tools do
         selection -> selection.card_ids
       end
 
-    by_id =
-      Card
-      |> Ash.Query.for_read(:board, %{include_archived: true})
-      |> Ash.Query.filter(id in ^card_ids)
-      |> Ash.read!()
-      |> Map.new(&{&1.id, &1})
-
     names = Json.actor_names()
-    cards = for id <- card_ids, card = by_id[id], do: Json.card(card, names)
+    cards = Enum.map(Graph.cards_in_order(card_ids), &Json.card(&1, names))
 
     {:ok, %{card_ids: Enum.map(cards, & &1.id), cards: cards}}
   end
 
   def changes_since(input, context) do
-    seq = input.arguments.seq
-    # Read the head before the events: anything committed in between is returned in
-    # `events`, so `latest_seq` never runs ahead of what the caller has seen.
-    head = Graph.latest_seq()
-
-    events =
-      Event
-      |> Ash.Query.for_read(:since, %{seq: seq})
-      |> Ash.Query.limit(@changes_limit + 1)
-      |> Ash.read!()
-
-    {events, has_more} =
-      if length(events) > @changes_limit,
-        do: {Enum.take(events, @changes_limit), true},
-        else: {events, false}
-
-    latest_seq =
-      case List.last(events) do
-        nil -> head
-        last when has_more -> last.seq
-        last -> max(head, last.seq)
-      end
-
-    record_look(context, latest_seq)
+    page = Graph.page_changes(input.arguments.seq)
+    record_look(context, page.latest_seq)
     names = Json.actor_names()
 
     {:ok,
      %{
-       latest_seq: latest_seq,
-       has_more: has_more,
-       events: Enum.map(events, &Json.event(&1, names))
+       latest_seq: page.latest_seq,
+       has_more: page.has_more,
+       events: Enum.map(page.events, &Json.event(&1, names))
      }}
   end
-
-  # Writes: one domain write each, returning the seq of the event it produced.
 
   def create_card(input, context) do
     with {:ok, actor} <- actor(input, context),
@@ -136,8 +100,8 @@ defmodule ThinkBench.Mcp.Tools do
     changes = Map.take(input.arguments, [:title, :body, :tags, :status, :pinned])
 
     with {:ok, actor} <- actor(input, context),
-         :ok <- require_changes(changes),
-         {:ok, card} <- Ash.get(Card, input.arguments.id),
+         :ok <- require_changes(changes, ~w(title body tags status pinned)a),
+         {:ok, card} <- Graph.get_card(input.arguments.id),
          {:ok, card} <- Graph.update_card(card, changes, actor: actor) do
       {:ok, %{seq: card.__metadata__.seq, card: Json.card(card, Json.actor_names())}}
     end
@@ -147,7 +111,7 @@ defmodule ThinkBench.Mcp.Tools do
     %{id: id, x: x, y: y} = input.arguments
 
     with {:ok, actor} <- actor(input, context),
-         {:ok, card} <- Ash.get(Card, id),
+         {:ok, card} <- Graph.get_card(id),
          {:ok, card} <- Graph.move_card(card, x, y, actor: actor) do
       {:ok, %{seq: card.__metadata__.seq, card: Json.card(card, Json.actor_names())}}
     end
@@ -155,7 +119,7 @@ defmodule ThinkBench.Mcp.Tools do
 
   def archive_card(input, context) do
     with {:ok, actor} <- actor(input, context),
-         {:ok, card} <- Ash.get(Card, input.arguments.id),
+         {:ok, card} <- Graph.get_card(input.arguments.id),
          {:ok, card} <- Graph.archive_card(card, actor: actor) do
       {:ok, %{seq: card.__metadata__.seq, card: Json.card(card, Json.actor_names())}}
     end
@@ -186,16 +150,32 @@ defmodule ThinkBench.Mcp.Tools do
     end
   end
 
-  # Remembers the cursor a read handed the agent, so the board UI can show what changed
-  # since the AI last looked. Best effort: a failed record never fails the read.
-  defp record_look(context, seq) do
-    actor =
-      case context.actor do
-        %Actor{} = actor -> actor
-        _ -> with {:ok, actor} <- resolve_actor(nil), do: actor
-      end
+  def update_region(input, context) do
+    changes = Map.take(input.arguments, [:title, :x, :y, :w, :h])
 
-    Graph.record_agent_look(actor, seq)
+    with {:ok, actor} <- actor(input, context),
+         :ok <- require_changes(changes, ~w(title x y w h)a),
+         {:ok, region} <- Graph.get_region(input.arguments.id),
+         {:ok, region} <- Graph.update_region(region, changes, actor: actor) do
+      {:ok, %{seq: region.__metadata__.seq, region: Json.region(region)}}
+    end
+  end
+
+  def destroy_region(input, context) do
+    with {:ok, actor} <- actor(input, context),
+         {:ok, region} <- Graph.get_region(input.arguments.id),
+         {:ok, region} <- Graph.destroy_region(region, actor: actor) do
+      {:ok, %{seq: region.__metadata__.seq, region: Json.region(region)}}
+    end
+  end
+
+  # Remembers the cursor a read handed the agent. Best effort: a failed record
+  # never fails the read. A missing actor is skipped — a look does not create one.
+  defp record_look(context, seq) do
+    case context do
+      %{actor: %Actor{} = actor} -> Graph.record_agent_look(actor, seq)
+      _ -> :ignored
+    end
   end
 
   defp actor(input, context) do
@@ -216,8 +196,7 @@ defmodule ThinkBench.Mcp.Tools do
 
     case {attrs[:x], attrs[:y]} do
       {nil, nil} ->
-        {x, y} = Placement.free_spot()
-        {:ok, Map.merge(attrs, %{x: x, y: y})}
+        {:ok, Map.drop(attrs, [:x, :y])}
 
       {x, y} when is_integer(x) and is_integer(y) ->
         {:ok, attrs}
@@ -227,12 +206,12 @@ defmodule ThinkBench.Mcp.Tools do
     end
   end
 
-  defp require_changes(changes) when map_size(changes) > 0, do: :ok
+  defp require_changes(changes, _fields) when map_size(changes) > 0, do: :ok
 
-  defp require_changes(_changes),
-    do: invalid(:id, "pass at least one of title, body, tags, status or pinned to change")
+  defp require_changes(_changes, fields),
+    do: invalid(:id, "pass at least one of #{Enum.join(fields, ", ")} to change")
 
-  defp find_link(%{id: id}) when is_binary(id), do: Ash.get(Link, id)
+  defp find_link(%{id: id}) when is_binary(id), do: Graph.get_link(id)
 
   defp find_link(%{from: from, to: to, type: type})
        when is_binary(from) and is_binary(to) and is_binary(type) do

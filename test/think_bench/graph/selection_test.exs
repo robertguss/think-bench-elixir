@@ -14,6 +14,15 @@ defmodule ThinkBench.Graph.SelectionTest do
     assert is_nil(Graph.get_selection!(%{session_id: "tab-2"}))
   end
 
+  test "a second session that never selects does not steal read_selection" do
+    [a] = Enum.map([1], fn i -> card(robert(), title: "card #{i}").id end)
+    Graph.set_selection!("tab-1", [a])
+
+    assert %{session_id: "tab-1", card_ids: [^a]} = Graph.get_selection!()
+    assert is_nil(Graph.get_selection!(%{session_id: "tab-2"}))
+    assert %{card_ids: [^a]} = Graph.get_selection!()
+  end
+
   test "selecting does not write to the event log" do
     seq = Graph.latest_seq()
     Graph.set_selection!("tab-1", [])

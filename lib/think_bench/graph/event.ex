@@ -45,6 +45,10 @@ defmodule ThinkBench.Graph.Event do
       prepare build(sort: [id: :desc], limit: 1)
     end
 
+    read :recent do
+      prepare build(sort: [id: :desc])
+    end
+
     read :latest_for_record do
       argument :record_id, :uuid, allow_nil?: false
       filter expr(record_id == ^arg(:record_id))
